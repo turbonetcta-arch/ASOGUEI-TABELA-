@@ -1,0 +1,8 @@
+{
+  "name": "Açougue Digital TV",
+  "short_name": "AçougueTV",
+  "description": "Aplicativo de mídia indoor para açougues com gerenciamento de ofertas e preços.",
+  "requestFramePermissions": [],
+  "display": "fullscreen",
+  "orientation": "landscape"
+}

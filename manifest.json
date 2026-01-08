@@ -1,0 +1,45 @@
+
+{
+  "name": "Açougue Digital Mídia Indoor",
+  "short_name": "Açougue TV",
+  "description": "Sistema de gerenciamento de ofertas e preços para TV de açougues.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#B91C1C",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1139/1139982.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1139/1139982.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1139/1139982.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Controle Remoto",
+      "url": "/?mode=controller",
+      "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/1139/1139982.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Modo TV",
+      "url": "/?mode=tv",
+      "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/1139/1139982.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
+}
