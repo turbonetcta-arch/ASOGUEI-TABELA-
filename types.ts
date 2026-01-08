@@ -16,11 +16,18 @@ export interface Promotion {
   isActive: boolean;
 }
 
+export interface SuperOffer {
+  productId: string;
+  discountPrice: number;
+  isActive: boolean;
+}
+
 export type AppMode = 'ADMIN' | 'TV' | 'CONTROLLER';
 
 export interface AppState {
   products: Product[];
   promotions: Promotion[];
+  superOffer: SuperOffer;
   storeName: string;
   accentColor: string;
   promoInterval: number;

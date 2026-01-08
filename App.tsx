@@ -5,7 +5,7 @@ import { INITIAL_PRODUCTS, INITIAL_PROMOTIONS } from './constants';
 import AdminPanel from './components/AdminPanel';
 import TvView from './components/TvView';
 import RemoteController from './components/RemoteController';
-import { Home, Tv, Smartphone } from 'lucide-react';
+import { Home } from 'lucide-react';
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<AppMode>('ADMIN');
@@ -21,6 +21,7 @@ const App: React.FC = () => {
     return {
       products: INITIAL_PRODUCTS,
       promotions: INITIAL_PROMOTIONS,
+      superOffer: { productId: '', discountPrice: 0, isActive: false },
       storeName: 'SEU AÇOUGUE PREFERIDO',
       accentColor: '#B91C1C',
       promoInterval: 10000,
@@ -28,26 +29,21 @@ const App: React.FC = () => {
     };
   });
 
-  // Inicializa o canal de sincronização "APK"
   useEffect(() => {
     syncChannel.current = new BroadcastChannel('acougue_tv_sync');
-    
     syncChannel.current.onmessage = (event) => {
       if (event.data.type === 'UPDATE_STATE') {
         setState(event.data.payload);
       }
     };
-
     return () => syncChannel.current?.close();
   }, []);
 
-  // Persistência e Broadcast
   useEffect(() => {
     localStorage.setItem('acougue_state', JSON.stringify(state));
     syncChannel.current?.postMessage({ type: 'UPDATE_STATE', payload: state });
   }, [state]);
 
-  // Gestão de Wake Lock
   useEffect(() => {
     let wakeLock: any = null;
     const requestWakeLock = async () => {
@@ -91,6 +87,12 @@ const App: React.FC = () => {
           onExit={() => setMode('ADMIN')} 
         />
       )}
+
+      <div className={`fixed bottom-0 left-0 right-0 flex justify-center pb-1 pointer-events-none z-[9999] transition-opacity duration-1000 ${mode === 'TV' ? 'opacity-30' : 'opacity-60'}`}>
+        <span className={`text-[10px] font-black uppercase tracking-[0.4em] ${mode === 'ADMIN' ? 'text-slate-400' : 'text-white/30'}`}>
+          Desenvolvido por Fabio FCell
+        </span>
+      </div>
     </div>
   );
 };

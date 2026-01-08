@@ -4,7 +4,8 @@ import { AppState, Product, Promotion } from '../types';
 import { 
   Plus, Trash2, Tv, Sparkles, Image as ImageIcon, Loader2, 
   Package, Tag, Settings2, Clock, CheckCircle2, Key, 
-  Smartphone, Download, Upload, ShieldCheck, HardDrive
+  Smartphone, Download, Upload, ShieldCheck, HardDrive,
+  AlertCircle, Wand2
 } from 'lucide-react';
 import { geminiService } from '../services/gemini';
 
@@ -26,7 +27,6 @@ const ToggleSwitch = ({ checked, onChange }: { checked: boolean, onChange: (val:
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode, onEnterControllerMode }) => {
   const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'PROMOS' | 'SETTINGS'>('PRODUCTS');
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
   const [saveStatus, setSaveStatus] = useState<'SAVED' | 'SAVING'>('SAVED');
   const [hasApiKey, setHasApiKey] = useState(true);
@@ -34,7 +34,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Captura o evento de instalação do "APK" (PWA)
     const handleBeforeInstall = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -117,7 +116,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
     const id = Date.now().toString();
     const newProduct: Product = { id, name: 'NOVA CARNE', price: 0, unit: 'KG', category: 'Geral' };
     setState(prev => ({ ...prev, products: [...prev.products, newProduct] }));
-    setEditingId(id);
+  };
+
+  const addPromo = () => {
+    if (state.products.length === 0) return;
+    const id = Date.now().toString();
+    const newPromo: Promotion = {
+      id,
+      productId: state.products[0].id,
+      offerPrice: state.products[0].price * 0.9,
+      imageUrl: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&auto=format&fit=crop',
+      description: 'Aproveite esta oferta imperdível!',
+      isActive: true
+    };
+    setState(prev => ({ ...prev, promotions: [...prev.promotions, newPromo] }));
   };
 
   const removeProduct = (id: string) => {
@@ -130,27 +142,34 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
     }
   };
 
-  const handleAiAction = async (id: string, type: 'DESC' | 'IMG', name: string) => {
-    if (type === 'IMG' && window.aistudio) {
-      const has = await window.aistudio.hasSelectedApiKey();
-      if (!has) {
-        await window.aistudio.openSelectKey();
-        setHasApiKey(true);
+  const removePromo = (id: string) => {
+    if (confirm('Remover esta oferta da TV?')) {
+      setState(prev => ({
+        ...prev,
+        promotions: prev.promotions.filter(p => p.id !== id)
+      }));
+    }
+  };
+
+  const handleAiAction = async (promoId: string, type: 'DESC' | 'IMG', productName: string) => {
+    setLoadingIds(prev => new Set(prev).add(`${promoId}-${type}`));
+    try {
+      if (type === 'DESC') {
+        const desc = await geminiService.generateCatchyDescription(productName);
+        updatePromo(promoId, { description: desc });
+      } else {
+        const img = await geminiService.generateProductImage(productName);
+        if (img) updatePromo(promoId, { imageUrl: img });
       }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingIds(prev => {
+        const next = new Set(prev);
+        next.delete(`${promoId}-${type}`);
+        return next;
+      });
     }
-    setLoadingIds(prev => new Set(prev).add(`${id}-${type}`));
-    if (type === 'DESC') {
-      const desc = await geminiService.generateCatchyDescription(name);
-      updatePromo(id, { description: desc });
-    } else {
-      const img = await geminiService.generateProductImage(name);
-      if (img) updatePromo(id, { imageUrl: img });
-    }
-    setLoadingIds(prev => {
-      const next = new Set(prev);
-      next.delete(`${id}-${type}`);
-      return next;
-    });
   };
 
   return (
@@ -274,6 +293,114 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
           </div>
         )}
 
+        {activeTab === 'PROMOS' && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="flex justify-between items-end mb-6">
+              <div>
+                <h2 className="text-2xl font-black text-slate-800 tracking-tight">Ofertas em Destaque</h2>
+                <p className="text-slate-400 text-xs font-medium">Estes itens aparecem com fotos grandes na TV.</p>
+              </div>
+              <button onClick={addPromo} className="bg-red-600 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-red-100 transition-all hover:bg-red-700">
+                <Plus size={18} /> Nova Promoção
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {state.promotions.map(promo => {
+                const product = state.products.find(p => p.id === promo.productId);
+                return (
+                  <div key={promo.id} className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col gap-4 shadow-sm relative group overflow-hidden">
+                    <div className="flex gap-4">
+                      {/* Imagem do Produto */}
+                      <div className="w-24 h-24 rounded-2xl bg-slate-100 overflow-hidden relative border border-slate-100 flex-shrink-0 group">
+                        <img src={promo.imageUrl} className="w-full h-full object-cover" />
+                        <button 
+                          onClick={() => handleAiAction(promo.id, 'IMG', product?.name || 'Carne')}
+                          disabled={loadingIds.has(`${promo.id}-IMG`)}
+                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"
+                        >
+                          {loadingIds.has(`${promo.id}-IMG`) ? <Loader2 size={24} className="animate-spin" /> : <ImageIcon size={24} />}
+                        </button>
+                      </div>
+
+                      <div className="flex-grow space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase">Produto na TV</label>
+                            <select 
+                              value={promo.productId}
+                              onChange={e => updatePromo(promo.id, { productId: e.target.value })}
+                              className="w-full bg-slate-50 border-none rounded-lg px-2 py-1.5 text-xs font-bold focus:ring-2 focus:ring-red-500 outline-none"
+                            >
+                              {state.products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                             <ToggleSwitch checked={promo.isActive} onChange={(val) => updatePromo(promo.id, { isActive: val })} />
+                             <span className={`text-[9px] font-bold uppercase ${promo.isActive ? 'text-emerald-600' : 'text-slate-400'}`}>
+                               {promo.isActive ? 'Ativo' : 'Pausado'}
+                             </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase">Preço Oferta</label>
+                            <div className="flex items-center bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100">
+                              <span className="text-slate-400 font-bold text-xs mr-1">R$</span>
+                              <input 
+                                type="number" step="0.01" value={promo.offerPrice}
+                                onChange={e => updatePromo(promo.id, { offerPrice: parseFloat(e.target.value) || 0 })}
+                                className="w-full bg-transparent text-xs font-black text-slate-700 outline-none"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-end">
+                            <button 
+                              onClick={() => handleAiAction(promo.id, 'DESC', product?.name || 'Carne')}
+                              disabled={loadingIds.has(`${promo.id}-DESC`)}
+                              className="w-full h-[34px] bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-tight hover:bg-blue-100 transition-colors"
+                            >
+                              {loadingIds.has(`${promo.id}-DESC`) ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                              Slogan IA
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase">Frase de Marketing (TV)</label>
+                      <textarea 
+                        value={promo.description}
+                        onChange={e => updatePromo(promo.id, { description: e.target.value })}
+                        rows={2}
+                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-medium text-slate-600 focus:ring-2 focus:ring-red-500 outline-none resize-none"
+                        placeholder="Ex: A melhor picanha para o seu churrasco!"
+                      />
+                    </div>
+
+                    <button 
+                      onClick={() => removePromo(promo.id)}
+                      className="absolute top-2 right-2 p-1.5 bg-red-50 text-red-400 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-600"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                );
+              })}
+
+              {state.promotions.length === 0 && (
+                <div className="md:col-span-2 py-12 flex flex-col items-center justify-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400">
+                  <Tag size={48} className="mb-4 opacity-20" />
+                  <p className="font-bold text-sm">Nenhuma oferta cadastrada.</p>
+                  <p className="text-xs">Clique em "Nova Promoção" para começar.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'SETTINGS' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
             {/* Coluna: Tempos e IA */}
@@ -285,9 +412,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
                 </div>
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ofertas (Segundos)</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rotação de Ofertas (Segundos)</label>
                     <input 
-                      type="range" min="3" max="30" step="1"
+                      type="range" min="3" max="60" step="1"
                       value={state.promoInterval / 1000}
                       onChange={e => setState(prev => ({ ...prev, promoInterval: parseInt(e.target.value) * 1000 }))}
                       className="w-full accent-red-600"
@@ -295,7 +422,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
                     <div className="flex justify-between text-xs font-bold text-slate-500">
                       <span>3s</span>
                       <span className="text-red-600 bg-red-50 px-2 rounded">{state.promoInterval / 1000}s</span>
-                      <span>30s</span>
+                      <span>60s</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Troca de Página Tabela (Segundos)</label>
+                    <input 
+                      type="range" min="5" max="120" step="1"
+                      value={state.productPageInterval / 1000}
+                      onChange={e => setState(prev => ({ ...prev, productPageInterval: parseInt(e.target.value) * 1000 }))}
+                      className="w-full accent-red-600"
+                    />
+                    <div className="flex justify-between text-xs font-bold text-slate-500">
+                      <span>5s</span>
+                      <span className="text-red-600 bg-red-50 px-2 rounded">{state.productPageInterval / 1000}s</span>
+                      <span>120s</span>
                     </div>
                   </div>
                 </div>
@@ -312,9 +453,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
                 >
                   <Key size={16} /> Configurar Gemini API
                 </button>
-                <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
-                  Necessário para gerar fotos realistas de carnes e slogans automáticos.
-                </p>
+                <div className="flex items-start gap-2 p-3 bg-amber-50 text-amber-700 rounded-xl">
+                  <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                  <p className="text-[10px] font-medium leading-relaxed">
+                    As chaves de API são necessárias para gerar imagens profissionais e textos de marketing. Recomendamos uma chave paga do Google para maior velocidade.
+                  </p>
+                </div>
               </div>
             </div>
 
