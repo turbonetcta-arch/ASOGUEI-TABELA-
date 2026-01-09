@@ -5,7 +5,7 @@ import { INITIAL_PRODUCTS, INITIAL_PROMOTIONS } from './constants';
 import AdminPanel from './components/AdminPanel';
 import TvView from './components/TvView';
 import RemoteController from './components/RemoteController';
-import { Home, Wifi, WifiOff, Globe, Server } from 'lucide-react';
+import { Home, Wifi, WifiOff, Globe, Server, Activity } from 'lucide-react';
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<AppMode>(() => {
@@ -31,6 +31,7 @@ const App: React.FC = () => {
   const [activeDevices, setActiveDevices] = useState<any[]>([]);
   const socketRef = useRef<WebSocket | null>(null);
   const isInternalChange = useRef(false);
+  const deviceId = useRef(Math.random().toString(36).substr(2, 4).toUpperCase());
 
   const [state, setState] = useState<AppState>(() => {
     try {
@@ -43,7 +44,7 @@ const App: React.FC = () => {
       products: INITIAL_PRODUCTS,
       promotions: INITIAL_PROMOTIONS,
       superOffer: { productIds: [], discountPrices: {}, isActive: false },
-      storeName: 'SEU AÇOUGUE PREFERIDO',
+      storeName: 'FABIO FCELL - AÇOUGUE PREMIUM',
       accentColor: '#B91C1C',
       promoInterval: 10000,
       productPageInterval: 8000,
@@ -55,12 +56,8 @@ const App: React.FC = () => {
     fetch('https://api.ipify.org?format=json')
       .then(res => res.json())
       .then(data => setRemoteIp(data.ip))
-      .catch(() => setRemoteIp('Local WiFi'));
+      .catch(() => setRemoteIp('WiFi Local'));
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('acougue_sync_code', syncCode);
-  }, [syncCode]);
 
   const sendRemoteCommand = (command: string, payload?: any) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
@@ -68,9 +65,18 @@ const App: React.FC = () => {
         type: 'REMOTE_COMMAND',
         room: syncCode,
         command,
-        payload
+        payload: { ...payload, senderId: deviceId.current }
       }));
     }
+  };
+
+  const announceDevice = () => {
+    sendRemoteCommand('DEVICE_ANNOUNCE', { 
+      id: deviceId.current, 
+      mode, 
+      ip: remoteIp,
+      lastSeen: Date.now()
+    });
   };
 
   useEffect(() => {
@@ -80,14 +86,7 @@ const App: React.FC = () => {
       ws.onopen = () => {
         setIsOnline(true);
         ws.send(JSON.stringify({ type: 'JOIN', room: syncCode }));
-        
-        // Anuncia o dispositivo ao entrar
-        ws.send(JSON.stringify({
-          type: 'REMOTE_COMMAND',
-          room: syncCode,
-          command: 'DEVICE_ANNOUNCE',
-          payload: { id: Math.random().toString(36).substr(2, 4), mode, ip: remoteIp }
-        }));
+        announceDevice();
       };
 
       ws.onmessage = (event) => {
@@ -102,21 +101,31 @@ const App: React.FC = () => {
           }
 
           if (data.type === 'REMOTE_COMMAND') {
-            if (data.command === 'SET_MODE' && data.payload) {
-              if (mode !== 'CONTROLLER') {
-                setMode(data.payload as AppMode);
+            const { command, payload } = data;
+
+            if (command === 'SET_MODE') {
+              // Se o comando for específico para um ID ou global
+              if (!payload.targetId || payload.targetId === deviceId.current) {
+                 if (mode !== 'CONTROLLER' && mode !== 'ADMIN') {
+                    setMode(payload.mode);
+                 }
               }
             }
-            if (data.command === 'DEVICE_ANNOUNCE' && mode === 'ADMIN') {
+
+            if (command === 'DEVICE_ANNOUNCE_REQUEST') {
+              announceDevice();
+            }
+
+            if (command === 'DEVICE_ANNOUNCE' && mode === 'ADMIN') {
               setActiveDevices(prev => {
-                const exists = prev.find(d => d.id === data.payload.id);
-                if (exists) return prev;
-                return [...prev, data.payload];
+                const filtered = prev.filter(d => d.id !== payload.id);
+                return [...filtered, { ...payload, status: 'ONLINE' }].sort((a, b) => a.id.localeCompare(b.id));
               });
             }
-            if (data.command === 'FORCE_UPDATE' && data.payload) {
+
+            if (command === 'FORCE_UPDATE' && payload) {
                 isInternalChange.current = true;
-                setState(data.payload);
+                setState(payload);
                 setTimeout(() => { isInternalChange.current = false; }, 100);
             }
           }
@@ -135,20 +144,23 @@ const App: React.FC = () => {
     return () => socketRef.current?.close();
   }, [syncCode, mode, remoteIp]);
 
-  // Limpa lista de dispositivos periodicamente (simulação de timeout)
+  // Gerenciamento de status offline (se não houver anúncio em 40s)
   useEffect(() => {
-    if (mode === 'ADMIN') {
-      const interval = setInterval(() => {
-        setActiveDevices([]);
-        sendRemoteCommand('DEVICE_ANNOUNCE', { mode, ip: remoteIp, id: 'admin' });
-      }, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [mode, remoteIp]);
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setActiveDevices(prev => prev.map(device => {
+        if (now - device.lastSeen > 40000) {
+          return { ...device, status: 'OFFLINE' };
+        }
+        return device;
+      }));
+      if (isOnline) announceDevice();
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [isOnline, mode, remoteIp]);
 
   useEffect(() => {
     localStorage.setItem('acougue_state', JSON.stringify(state));
-    
     if (!isInternalChange.current && socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({
         type: 'UPDATE_STATE',
@@ -161,11 +173,11 @@ const App: React.FC = () => {
   return (
     <div className={`relative min-h-screen bg-black transition-colors duration-500 overflow-x-hidden ${state.tvOrientation === 90 && mode === 'TV' ? 'overflow-hidden' : ''}`}>
       
-      <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-4 px-4 py-2 rounded-full bg-black/80 backdrop-blur-2xl border border-white/10 pointer-events-none shadow-2xl transition-all">
+      <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-4 px-5 py-2.5 rounded-full bg-black/80 backdrop-blur-2xl border border-white/10 pointer-events-none shadow-2xl transition-all">
         <div className="flex items-center gap-2">
-            <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-            <span className={`text-[10px] font-black uppercase tracking-widest ${isOnline ? 'text-emerald-400' : 'text-red-400'}`}>
-                {isOnline ? 'Cloud OK' : 'Offline'}
+            <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.8)]' : 'bg-red-500'}`} />
+            <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isOnline ? 'text-emerald-400' : 'text-red-400'}`}>
+                {isOnline ? 'SERVIDOR FABIO FCELL ATIVO' : 'CONEXÃO INTERROMPIDA'}
             </span>
         </div>
         <div className="w-px h-3 bg-white/20" />
@@ -196,7 +208,7 @@ const App: React.FC = () => {
             className="fixed top-6 left-6 flex items-center gap-3 bg-black/30 hover:bg-black/80 text-white/40 hover:text-white px-6 py-3 rounded-2xl z-[101] transition-all opacity-0 hover:opacity-100 border border-white/10 backdrop-blur-md group"
           >
             <Home size={24} />
-            <span className="font-bold text-sm uppercase tracking-widest">Sair da TV</span>
+            <span className="font-bold text-sm uppercase tracking-widest">Painel Admin</span>
           </button>
         </>
       )}
@@ -211,9 +223,9 @@ const App: React.FC = () => {
         />
       )}
 
-      <div className={`fixed bottom-0 left-0 right-0 flex justify-center pb-1 pointer-events-none z-[9999] transition-opacity duration-1000 ${mode === 'TV' ? 'opacity-30' : 'opacity-60'}`}>
-        <span className={`text-[10px] font-black uppercase tracking-[0.4em] ${mode === 'ADMIN' ? 'text-slate-400' : 'text-white/30'}`}>
-          Sistema Ativo • {remoteIp} • Fabio FCell
+      <div className="fixed bottom-0 left-0 right-0 flex justify-center pb-2 pointer-events-none z-[9999] opacity-30">
+        <span className="text-[8px] font-black uppercase tracking-[0.6em] text-white">
+          FABIO FCELL • MEDIA SERVER INFRASTRUCTURE
         </span>
       </div>
     </div>
