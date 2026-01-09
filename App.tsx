@@ -25,7 +25,8 @@ const App: React.FC = () => {
       storeName: 'SEU AÇOUGUE PREFERIDO',
       accentColor: '#B91C1C',
       promoInterval: 10000,
-      productPageInterval: 8000
+      productPageInterval: 8000,
+      tvOrientation: 0
     };
   });
 
@@ -57,7 +58,7 @@ const App: React.FC = () => {
   }, [mode]);
 
   return (
-    <div className="relative min-h-screen bg-black transition-colors duration-500 overflow-x-hidden">
+    <div className={`relative min-h-screen bg-black transition-colors duration-500 overflow-x-hidden ${state.tvOrientation === 90 && mode === 'TV' ? 'overflow-hidden' : ''}`}>
       {mode === 'ADMIN' && (
         <AdminPanel 
           state={state} 
@@ -69,10 +70,10 @@ const App: React.FC = () => {
       
       {mode === 'TV' && (
         <>
-          <TvView state={state} />
+          <TvView state={state} setState={setState} />
           <button 
             onClick={() => setMode('ADMIN')}
-            className="fixed top-6 left-6 flex items-center gap-3 bg-black/30 hover:bg-black/80 text-white/40 hover:text-white px-6 py-3 rounded-2xl z-50 transition-all opacity-0 hover:opacity-100 border border-white/10 backdrop-blur-md group"
+            className="fixed top-6 left-6 flex items-center gap-3 bg-black/30 hover:bg-black/80 text-white/40 hover:text-white px-6 py-3 rounded-2xl z-[101] transition-all opacity-0 hover:opacity-100 border border-white/10 backdrop-blur-md group"
           >
             <Home size={24} />
             <span className="font-bold text-sm uppercase tracking-widest">Painel</span>

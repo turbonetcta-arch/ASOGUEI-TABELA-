@@ -32,4 +32,5 @@ export interface AppState {
   accentColor: string;
   promoInterval: number;
   productPageInterval: number;
+  tvOrientation: 0 | 90; // 0 para Horizontal, 90 para Vertical
 }

@@ -4,7 +4,8 @@ import { AppState, Product, Promotion } from '../types';
 import { 
   Plus, Trash2, Tv, Sparkles, Loader2, 
   Package, Tag, Settings2, CheckCircle2, Key, 
-  Smartphone, Download, Wand2, FileUp
+  Smartphone, Download, Wand2, FileUp, AlertCircle,
+  RotateCcw, RotateCw, Monitor
 } from 'lucide-react';
 import { geminiService } from '../services/gemini';
 
@@ -83,21 +84,26 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
   const addProduct = () => {
     const id = Date.now().toString();
     const newProduct: Product = { id, name: 'NOVA CARNE', price: 0, unit: 'KG', category: 'Geral' };
-    setState(prev => ({ ...prev, products: [...prev.products, newProduct] }));
+    setState(prev => ({ ...prev, products: [newProduct, ...prev.products] }));
   };
 
   const addPromo = () => {
-    if (state.products.length === 0) return;
+    if (state.products.length === 0) {
+      alert("Adicione primeiro um produto na Tabela de Preços para criar uma oferta.");
+      setActiveTab('PRODUCTS');
+      return;
+    }
     const id = Date.now().toString();
+    const firstProduct = state.products[0];
     const newPromo: Promotion = {
       id,
-      productId: state.products[0].id,
-      offerPrice: state.products[0].price * 0.9,
+      productId: firstProduct.id,
+      offerPrice: firstProduct.price > 0 ? firstProduct.price * 0.9 : 0,
       imageUrl: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&auto=format&fit=crop',
-      description: 'Aproveite esta oferta imperdível!',
+      description: `OFERTA IMPERDÍVEL: ${firstProduct.name}!`,
       isActive: true
     };
-    setState(prev => ({ ...prev, promotions: [...prev.promotions, newPromo] }));
+    setState(prev => ({ ...prev, promotions: [newPromo, ...prev.promotions] }));
   };
 
   const handleAiAction = async (promoId: string, type: 'DESC' | 'IMG', productName: string) => {
@@ -123,7 +129,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
-      {/* Input de arquivo escondido para as ofertas */}
       <input 
         type="file" 
         ref={promoFileInputRef} 
@@ -200,7 +205,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {state.products.map(p => (
-                    <tr key={p.id} className="hover:bg-slate-50/50">
+                    <tr key={p.id} className="hover:bg-slate-50/50 animate-in fade-in duration-500">
                       <td className="px-8 py-4">
                         <input value={p.name} onChange={e => updateProduct(p.id, { name: e.target.value.toUpperCase() })} className="w-full bg-transparent font-bold text-slate-800 focus:ring-0 outline-none p-0" />
                       </td>
@@ -227,14 +232,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2 flex justify-between items-end mb-4">
               <h2 className="text-2xl font-black text-slate-800 tracking-tight">Ofertas em Destaque</h2>
-              <button onClick={addPromo} className="bg-red-600 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2">
-                <Plus size={18} /> Nova Promoção
+              <button 
+                onClick={addPromo} 
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-lg shadow-red-200 transition-all active:scale-95 group"
+              >
+                <Plus size={20} className="group-hover:rotate-90 transition-transform" /> 
+                NOVA PROMOÇÃO
               </button>
             </div>
+            
+            {state.promotions.length === 0 && (
+              <div className="md:col-span-2 py-20 flex flex-col items-center justify-center text-slate-400 bg-white rounded-[3rem] border-2 border-dashed border-slate-200">
+                <Tag size={48} className="mb-4 opacity-20" />
+                <p className="font-bold text-lg">Nenhuma promoção ativa</p>
+                <p className="text-sm">Clique em "Nova Promoção" para começar.</p>
+              </div>
+            )}
+
             {state.promotions.map(promo => {
               const product = state.products.find(p => p.id === promo.productId);
               return (
-                <div key={promo.id} className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col gap-4 shadow-sm relative group">
+                <div key={promo.id} className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col gap-4 shadow-sm relative group animate-in zoom-in-95 fade-in duration-300">
                   <div className="flex gap-4">
                     <div className="w-32 h-32 rounded-2xl bg-slate-100 overflow-hidden relative border-2 border-slate-100 flex-shrink-0 group/img shadow-sm">
                       <img src={promo.imageUrl} className="w-full h-full object-cover" />
@@ -258,26 +276,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
                       </div>
                     </div>
                     <div className="flex-grow space-y-3">
-                      <select value={promo.productId} onChange={e => updatePromo(promo.id, { productId: e.target.value })} className="w-full bg-slate-50 border-none rounded-lg px-2 py-1.5 text-xs font-bold outline-none">
-                        {state.products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                      </select>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black text-slate-400 uppercase">Produto Vinculado</label>
+                        <select value={promo.productId} onChange={e => updatePromo(promo.id, { productId: e.target.value })} className="w-full bg-slate-50 border-none rounded-lg px-2 py-1.5 text-xs font-bold outline-none">
+                          {state.products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
                           <label className="text-[8px] font-black text-slate-400 uppercase block">Preço Oferta</label>
                           <input type="number" step="0.01" value={promo.offerPrice} onChange={e => updatePromo(promo.id, { offerPrice: parseFloat(e.target.value) || 0 })} className="w-full bg-transparent text-xs font-black outline-none" />
                         </div>
-                        <button onClick={() => handleAiAction(promo.id, 'DESC', product?.name || 'Carne')} className="bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center gap-2 text-[9px] font-black uppercase border border-blue-100">
+                        <button onClick={() => handleAiAction(promo.id, 'DESC', product?.name || 'Carne')} className="bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center gap-2 text-[9px] font-black uppercase border border-blue-100 hover:bg-blue-100 transition-colors">
                           <Wand2 size={12} /> Frase IA
                         </button>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 pt-1">
                         <ToggleSwitch checked={promo.isActive} onChange={(val) => updatePromo(promo.id, { isActive: val })} />
-                        <span className="text-[10px] font-bold text-slate-500 uppercase">{promo.isActive ? 'Ativo' : 'Pausado'}</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">{promo.isActive ? 'Ativo na TV' : 'Pausado'}</span>
                       </div>
                     </div>
                   </div>
-                  <textarea value={promo.description} onChange={e => updatePromo(promo.id, { description: e.target.value })} className="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs outline-none h-16 resize-none" placeholder="Frase de marketing..." />
-                  <button onClick={() => setState(prev => ({...prev, promotions: prev.promotions.filter(item => item.id !== promo.id)}))} className="absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-600"><Trash2 size={14} /></button>
+                  <textarea value={promo.description} onChange={e => updatePromo(promo.id, { description: e.target.value })} className="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs outline-none h-16 resize-none focus:border-red-200 transition-colors" placeholder="Frase de marketing..." />
+                  <button onClick={() => setState(prev => ({...prev, promotions: prev.promotions.filter(item => item.id !== promo.id)}))} className="absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
                 </div>
               );
             })}
@@ -286,18 +307,42 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
 
         {activeTab === 'SETTINGS' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-2xl mx-auto space-y-6">
+            {/* Orientação da TV */}
+            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+              <h3 className="font-black text-lg mb-6 flex items-center gap-2"><Monitor className="text-red-600" /> Orientação da TV</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  onClick={() => setState(prev => ({...prev, tvOrientation: 0}))}
+                  className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all ${state.tvOrientation === 0 ? 'bg-red-50 border-red-600 text-red-600' : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100'}`}
+                >
+                  <RotateCcw size={32} />
+                  <span className="font-black uppercase text-xs">Horizontal (360°)</span>
+                </button>
+                <button 
+                  onClick={() => setState(prev => ({...prev, tvOrientation: 90}))}
+                  className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all ${state.tvOrientation === 90 ? 'bg-red-50 border-red-600 text-red-600' : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100'}`}
+                >
+                  <RotateCw size={32} />
+                  <span className="font-black uppercase text-xs">Vertical (90°)</span>
+                </button>
+              </div>
+            </div>
+
             <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
               <h3 className="font-black text-lg mb-6 flex items-center gap-2"><Settings2 className="text-red-600" /> Sistema</h3>
               <div className="space-y-4">
-                <button onClick={exportData} className="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 py-4 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-200">
+                <button onClick={exportData} className="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 py-4 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-200 transition-all">
                   <Download size={18} /> Backup dos Dados
                 </button>
-                <button onClick={() => window.aistudio?.openSelectKey()} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2">
+                <button onClick={() => window.aistudio?.openSelectKey()} className="w-full bg-slate-900 hover:bg-black text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
                   <Key size={18} /> Chave API Google
                 </button>
-                <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
-                  <p className="text-[10px] font-bold text-amber-700 uppercase mb-1">Aviso de Imagens</p>
-                  <p className="text-[11px] text-amber-600 leading-relaxed">As imagens geradas por IA ou enviadas manualmente são salvas localmente no navegador. Faça backup regularmente.</p>
+                <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">
+                  <AlertCircle className="text-amber-600 flex-shrink-0" size={20} />
+                  <div>
+                    <p className="text-[10px] font-bold text-amber-700 uppercase mb-1">Aviso de Imagens</p>
+                    <p className="text-[11px] text-amber-600 leading-relaxed">As imagens geradas por IA ou enviadas manualmente são salvas localmente no navegador. Faça backup regularmente para não perder seus dados ao limpar o cache.</p>
+                  </div>
                 </div>
               </div>
             </div>
