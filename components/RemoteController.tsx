@@ -1,15 +1,16 @@
 
 import React, { useState } from 'react';
 import { AppState, Product, Promotion } from '../types';
-import { ArrowLeft, Zap, Volume2, Star, X, Check, Package, Tag, Power } from 'lucide-react';
+import { ArrowLeft, Zap, Volume2, Star, X, Check, Package, Tag, Power, Monitor, Tv } from 'lucide-react';
 
 interface RemoteControllerProps {
   state: AppState;
   setState: React.Dispatch<React.SetStateAction<AppState>>;
   onExit: () => void;
+  sendRemoteCommand?: (command: string, payload?: any) => void;
 }
 
-const RemoteController: React.FC<RemoteControllerProps> = ({ state, setState, onExit }) => {
+const RemoteController: React.FC<RemoteControllerProps> = ({ state, setState, onExit, sendRemoteCommand }) => {
   const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'PROMOS'>('PRODUCTS');
   const [showSuperOfferModal, setShowSuperOfferModal] = useState(false);
 
@@ -77,6 +78,20 @@ const RemoteController: React.FC<RemoteControllerProps> = ({ state, setState, on
     }));
   };
 
+  const handleRemoteSetTvMode = () => {
+    if (sendRemoteCommand) {
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      sendRemoteCommand('SET_MODE', 'TV');
+      alert("Comando enviado! A TV pareada entrará no Modo Menu.");
+    }
+  };
+
+  const handleRemoteSetAdminMode = () => {
+    if (sendRemoteCommand) {
+      sendRemoteCommand('SET_MODE', 'ADMIN');
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-[#0f172a] text-white flex flex-col font-sans select-none animate-in fade-in duration-300">
       <header className="p-4 bg-[#1e293b] flex flex-col border-b border-white/5 shadow-xl gap-4">
@@ -86,9 +101,13 @@ const RemoteController: React.FC<RemoteControllerProps> = ({ state, setState, on
             <h2 className="text-xs font-black text-blue-400 uppercase tracking-widest">Controle Remoto</h2>
             <p className="text-[10px] font-bold text-slate-400 uppercase truncate max-w-[150px]">{state.storeName}</p>
           </div>
-          <div className="w-10 h-10 bg-blue-600/20 rounded-full flex items-center justify-center text-blue-400">
-            <Zap size={20} className="animate-pulse" />
-          </div>
+          <button 
+            onClick={handleRemoteSetTvMode}
+            className="w-10 h-10 bg-red-600/20 rounded-xl flex items-center justify-center text-red-500 border border-red-500/30 active:scale-90 transition-transform"
+            title="Ativar Modo TV na Tela Pareada"
+          >
+            <Tv size={20} />
+          </button>
         </div>
 
         <nav className="flex bg-[#0f172a] p-1 rounded-xl gap-1">
@@ -98,6 +117,21 @@ const RemoteController: React.FC<RemoteControllerProps> = ({ state, setState, on
       </header>
 
       <main className="flex-grow overflow-y-auto p-4 space-y-4 pb-40">
+        <div className="grid grid-cols-2 gap-2 mb-2">
+            <button 
+                onClick={handleRemoteSetTvMode}
+                className="flex items-center justify-center gap-2 bg-red-600 py-3 rounded-xl font-black uppercase text-[9px] shadow-lg active:bg-red-700"
+            >
+                <Tv size={14} /> Ativar Modo TV
+            </button>
+            <button 
+                onClick={handleRemoteSetAdminMode}
+                className="flex items-center justify-center gap-2 bg-slate-800 py-3 rounded-xl font-black uppercase text-[9px] border border-white/5 active:bg-slate-700"
+            >
+                <Monitor size={14} /> Abrir Painel
+            </button>
+        </div>
+
         {state.superOffer.isActive && (
           <div className="bg-yellow-400 p-4 rounded-2xl flex items-center justify-between shadow-lg">
             <div className="flex items-center gap-3">

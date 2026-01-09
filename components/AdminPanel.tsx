@@ -642,4 +642,44 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
           <div className="bg-white w-full max-w-lg rounded-[2.5rem] flex flex-col p-6 shadow-2xl animate-in zoom-in-95 duration-300">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
-                <Star className="text-yellow-500 fill-
+                <Star className="text-yellow-500 fill-yellow-500" />
+                <h3 className="text-xl font-black text-slate-800 uppercase italic">Multi-Flash do Dia</h3>
+              </div>
+              <button onClick={() => setShowMultiSelect(false)} className="p-2 bg-slate-100 rounded-full text-slate-400 hover:text-red-600 transition-colors"><X size={24} /></button>
+            </div>
+            
+            <p className="text-[10px] font-bold text-slate-400 uppercase mb-4 px-2">Selecione os produtos que entrarão no rodízio de destaque especial</p>
+
+            <div className="flex-grow overflow-y-auto space-y-3 max-h-[60vh] pr-2">
+              {state.products.map(p => {
+                const isSelected = state.superOffer.productIds.includes(p.id);
+                return (
+                  <div key={p.id} className={`p-4 rounded-2xl border transition-all ${isSelected ? 'bg-yellow-50 border-yellow-400 shadow-sm' : 'bg-slate-50 border-slate-100'}`}>
+                    <div className="flex justify-between items-center mb-3">
+                      <p className={`font-bold text-sm uppercase ${isSelected ? 'text-yellow-700' : 'text-slate-700'}`}>{p.name}</p>
+                      {isSelected && <CheckCircle2 size={18} className="text-yellow-500" />}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[10, 20, 30].map(pct => (
+                        <button 
+                          key={pct}
+                          onClick={() => toggleSuperOfferProduct(p, pct)}
+                          className={`py-2 rounded-xl font-black text-[9px] uppercase transition-all ${isSelected ? 'bg-yellow-400 text-black shadow-sm' : 'bg-white text-slate-400 border border-slate-200 hover:border-yellow-200'}`}
+                        >
+                          -{pct}% OFF
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <button onClick={() => setShowMultiSelect(false)} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-sm mt-6 shadow-xl active:scale-95 transition-all">Confirmar Seleção</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AdminPanel;
