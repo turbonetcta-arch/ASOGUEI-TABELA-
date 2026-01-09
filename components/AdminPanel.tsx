@@ -5,7 +5,7 @@ import {
   Plus, Trash2, Tv, Sparkles, Loader2, 
   Package, Tag, Settings2, CheckCircle2, Key, 
   Smartphone, Download, Wand2, FileUp, AlertCircle,
-  RotateCcw, RotateCw, Monitor
+  RotateCcw, RotateCw, Monitor, ChevronRight
 } from 'lucide-react';
 import { geminiService } from '../services/gemini';
 
@@ -19,9 +19,9 @@ interface AdminPanelProps {
 const ToggleSwitch = ({ checked, onChange }: { checked: boolean, onChange: (val: boolean) => void }) => (
   <button 
     onClick={(e) => { e.stopPropagation(); onChange(!checked); }}
-    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? 'bg-red-600' : 'bg-slate-300'}`}
+    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${checked ? 'bg-red-600' : 'bg-slate-300'}`}
   >
-    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
+    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
   </button>
 );
 
@@ -128,7 +128,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 pb-20">
       <input 
         type="file" 
         ref={promoFileInputRef} 
@@ -137,7 +137,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
         className="hidden" 
       />
 
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex flex-col md:flex-row gap-4 justify-between items-center sticky top-0 z-30 shadow-sm">
+      <header className="bg-white border-b border-slate-200 px-4 py-4 flex flex-col md:flex-row gap-4 justify-between items-center sticky top-0 z-30 shadow-sm">
         <div className="flex items-center gap-4 w-full md:w-auto">
           <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-200">
             <Package size={22} />
@@ -159,17 +159,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
-          <button onClick={onEnterControllerMode} className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all">
+          <button onClick={onEnterControllerMode} className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all flex-1 md:flex-none justify-center">
             <Smartphone size={18} /> Celular
           </button>
-          <button onClick={onEnterTvMode} className="bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95">
+          <button onClick={onEnterTvMode} className="bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 flex-1 md:flex-none justify-center">
             <Tv size={18} /> Modo TV
           </button>
         </div>
       </header>
 
       <main className="flex-grow p-4 md:p-6 max-w-6xl mx-auto w-full">
-        <nav className="flex gap-1 bg-white p-1 rounded-2xl border border-slate-200 w-fit mb-8 shadow-sm overflow-x-auto">
+        <nav className="flex gap-1 bg-white p-1 rounded-2xl border border-slate-200 w-full md:w-fit mb-8 shadow-sm overflow-x-auto sticky top-[90px] md:top-[100px] z-20">
           {[
             { id: 'PRODUCTS', label: 'Tabela Preços', icon: Package },
             { id: 'PROMOS', label: 'Ofertas TV', icon: Tag },
@@ -178,7 +178,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 md:px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-red-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+              className={`flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all whitespace-nowrap flex-1 ${activeTab === tab.id ? 'bg-red-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
             >
               <tab.icon size={18} /> {tab.label}
             </button>
@@ -189,41 +189,56 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex justify-between items-end mb-6">
               <h2 className="text-2xl font-black text-slate-800 tracking-tight">Lista de Preços</h2>
-              <button onClick={addProduct} className="bg-white border-2 border-slate-200 hover:border-red-600 hover:text-red-600 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all">
+              <button onClick={addProduct} className="bg-white border-2 border-slate-200 hover:border-red-600 hover:text-red-600 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-sm">
                 <Plus size={18} /> Novo Item
               </button>
             </div>
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-100">
-                  <tr className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <th className="px-8 py-4">Produto</th>
-                    <th className="px-8 py-4">Preço (R$)</th>
-                    <th className="px-8 py-4">Un</th>
-                    <th className="px-8 py-4 text-right">Ação</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {state.products.map(p => (
-                    <tr key={p.id} className="hover:bg-slate-50/50 animate-in fade-in duration-500">
-                      <td className="px-8 py-4">
-                        <input value={p.name} onChange={e => updateProduct(p.id, { name: e.target.value.toUpperCase() })} className="w-full bg-transparent font-bold text-slate-800 focus:ring-0 outline-none p-0" />
-                      </td>
-                      <td className="px-8 py-4">
-                        <input type="number" step="0.01" value={p.price} onChange={e => updateProduct(p.id, { price: parseFloat(e.target.value) || 0 })} className="w-24 bg-transparent font-mono font-black text-slate-600 focus:ring-0 outline-none p-0" />
-                      </td>
-                      <td className="px-8 py-4">
-                        <select value={p.unit} onChange={e => updateProduct(p.id, { unit: e.target.value })} className="bg-slate-100 border-none rounded-lg px-2 py-1 text-[10px] font-black outline-none">
-                          {['KG', 'UN', 'PC', 'BD'].map(u => <option key={u} value={u}>{u}</option>)}
-                        </select>
-                      </td>
-                      <td className="px-8 py-4 text-right">
-                        <button onClick={() => setState(prev => ({...prev, products: prev.products.filter(item => item.id !== p.id)}))} className="p-2 text-slate-300 hover:text-red-600"><Trash2 size={18} /></button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            
+            {/* LISTA EM CARDS PARA MODO CELULAR */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {state.products.map(p => (
+                <div key={p.id} className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col gap-3 relative group animate-in fade-in duration-500">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-grow mr-8">
+                      <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Nome do Produto</label>
+                      <input 
+                        value={p.name} 
+                        onChange={e => updateProduct(p.id, { name: e.target.value.toUpperCase() })} 
+                        className="w-full bg-slate-50 border-none rounded-xl px-3 py-2 font-black text-slate-800 text-sm focus:ring-2 focus:ring-red-100 outline-none"
+                      />
+                    </div>
+                    <button 
+                      onClick={() => setState(prev => ({...prev, products: prev.products.filter(item => item.id !== p.id)}))} 
+                      className="p-2 text-slate-300 hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <div className="flex-grow">
+                      <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Preço (R$)</label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        value={p.price} 
+                        onChange={e => updateProduct(p.id, { price: parseFloat(e.target.value) || 0 })} 
+                        className="w-full bg-slate-50 border-none rounded-xl px-3 py-2 font-mono font-black text-slate-700 text-lg focus:ring-2 focus:ring-red-100 outline-none"
+                      />
+                    </div>
+                    <div className="w-24">
+                      <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Unidade</label>
+                      <select 
+                        value={p.unit} 
+                        onChange={e => updateProduct(p.id, { unit: e.target.value })} 
+                        className="w-full bg-slate-50 border-none rounded-xl px-3 py-2 text-xs font-black outline-none h-[44px]"
+                      >
+                        {['KG', 'UN', 'PC', 'BD'].map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -252,20 +267,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
             {state.promotions.map(promo => {
               const product = state.products.find(p => p.id === promo.productId);
               return (
-                <div key={promo.id} className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col gap-4 shadow-sm relative group animate-in zoom-in-95 fade-in duration-300">
-                  <div className="flex gap-4">
-                    <div className="w-32 h-32 rounded-2xl bg-slate-100 overflow-hidden relative border-2 border-slate-100 flex-shrink-0 group/img shadow-sm">
+                <div key={promo.id} className="bg-white rounded-3xl border border-slate-200 p-5 flex flex-col gap-4 shadow-sm relative group animate-in zoom-in-95 fade-in duration-300">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="w-full sm:w-32 h-40 sm:h-32 rounded-2xl bg-slate-100 overflow-hidden relative border-2 border-slate-100 flex-shrink-0 group/img shadow-sm">
                       <img src={promo.imageUrl} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/img:opacity-100 flex flex-col items-center justify-center text-white transition-opacity gap-3">
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/img:opacity-100 flex flex-row sm:flex-col items-center justify-center text-white transition-opacity gap-4">
                         <button 
                           onClick={() => handleAiAction(promo.id, 'IMG', product?.name || 'Carne')}
                           disabled={loadingIds.has(`${promo.id}-IMG`)}
                           className="flex flex-col items-center gap-1 hover:text-red-400 transition-colors"
                         >
                           {loadingIds.has(`${promo.id}-IMG`) ? <Loader2 size={24} className="animate-spin" /> : <Sparkles size={24} />}
-                          <span className="text-[8px] font-black uppercase tracking-widest">Gerar IA</span>
+                          <span className="text-[8px] font-black uppercase tracking-widest">IA</span>
                         </button>
-                        <div className="w-full h-[1px] bg-white/20 px-4" />
                         <button 
                           onClick={() => triggerManualUpload(promo.id)}
                           className="flex flex-col items-center gap-1 hover:text-blue-400 transition-colors"
@@ -277,28 +291,28 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
                     </div>
                     <div className="flex-grow space-y-3">
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black text-slate-400 uppercase">Produto Vinculado</label>
-                        <select value={promo.productId} onChange={e => updatePromo(promo.id, { productId: e.target.value })} className="w-full bg-slate-50 border-none rounded-lg px-2 py-1.5 text-xs font-bold outline-none">
+                        <label className="text-[9px] font-black text-slate-400 uppercase">Produto Vinculado</label>
+                        <select value={promo.productId} onChange={e => updatePromo(promo.id, { productId: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl px-3 py-2.5 text-xs font-bold outline-none">
                           {state.products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                          <label className="text-[8px] font-black text-slate-400 uppercase block">Preço Oferta</label>
-                          <input type="number" step="0.01" value={promo.offerPrice} onChange={e => updatePromo(promo.id, { offerPrice: parseFloat(e.target.value) || 0 })} className="w-full bg-transparent text-xs font-black outline-none" />
+                        <div className="bg-slate-50 p-2 px-3 rounded-xl border border-slate-100">
+                          <label className="text-[9px] font-black text-slate-400 uppercase block">Oferta R$</label>
+                          <input type="number" step="0.01" value={promo.offerPrice} onChange={e => updatePromo(promo.id, { offerPrice: parseFloat(e.target.value) || 0 })} className="w-full bg-transparent text-sm font-black outline-none" />
                         </div>
-                        <button onClick={() => handleAiAction(promo.id, 'DESC', product?.name || 'Carne')} className="bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center gap-2 text-[9px] font-black uppercase border border-blue-100 hover:bg-blue-100 transition-colors">
+                        <button onClick={() => handleAiAction(promo.id, 'DESC', product?.name || 'Carne')} className="bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase border border-blue-100 hover:bg-blue-100 transition-colors">
                           <Wand2 size={12} /> Frase IA
                         </button>
                       </div>
-                      <div className="flex items-center gap-2 pt-1">
+                      <div className="flex items-center gap-3 pt-1">
                         <ToggleSwitch checked={promo.isActive} onChange={(val) => updatePromo(promo.id, { isActive: val })} />
-                        <span className="text-[10px] font-bold text-slate-500 uppercase">{promo.isActive ? 'Ativo na TV' : 'Pausado'}</span>
+                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">{promo.isActive ? 'Ativo na TV' : 'Pausado'}</span>
                       </div>
                     </div>
                   </div>
-                  <textarea value={promo.description} onChange={e => updatePromo(promo.id, { description: e.target.value })} className="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs outline-none h-16 resize-none focus:border-red-200 transition-colors" placeholder="Frase de marketing..." />
-                  <button onClick={() => setState(prev => ({...prev, promotions: prev.promotions.filter(item => item.id !== promo.id)}))} className="absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+                  <textarea value={promo.description} onChange={e => updatePromo(promo.id, { description: e.target.value })} className="w-full bg-slate-50 border rounded-xl px-4 py-3 text-xs outline-none h-20 resize-none focus:border-red-200 transition-colors" placeholder="Frase de marketing..." />
+                  <button onClick={() => setState(prev => ({...prev, promotions: prev.promotions.filter(item => item.id !== promo.id)}))} className="absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
                 </div>
               );
             })}
@@ -308,27 +322,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
         {activeTab === 'SETTINGS' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-2xl mx-auto space-y-6">
             {/* Orientação da TV */}
-            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+            <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm">
               <h3 className="font-black text-lg mb-6 flex items-center gap-2"><Monitor className="text-red-600" /> Orientação da TV</h3>
               <div className="grid grid-cols-2 gap-4">
                 <button 
                   onClick={() => setState(prev => ({...prev, tvOrientation: 0}))}
-                  className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all ${state.tvOrientation === 0 ? 'bg-red-50 border-red-600 text-red-600' : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100'}`}
+                  className={`flex flex-col items-center gap-3 p-6 rounded-3xl border-2 transition-all ${state.tvOrientation === 0 ? 'bg-red-50 border-red-600 text-red-600' : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100'}`}
                 >
                   <RotateCcw size={32} />
-                  <span className="font-black uppercase text-xs">Horizontal (360°)</span>
+                  <span className="font-black uppercase text-[10px] tracking-widest">Horizontal</span>
                 </button>
                 <button 
                   onClick={() => setState(prev => ({...prev, tvOrientation: 90}))}
-                  className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all ${state.tvOrientation === 90 ? 'bg-red-50 border-red-600 text-red-600' : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100'}`}
+                  className={`flex flex-col items-center gap-3 p-6 rounded-3xl border-2 transition-all ${state.tvOrientation === 90 ? 'bg-red-50 border-red-600 text-red-600' : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100'}`}
                 >
                   <RotateCw size={32} />
-                  <span className="font-black uppercase text-xs">Vertical (90°)</span>
+                  <span className="font-black uppercase text-[10px] tracking-widest">Vertical (90°)</span>
                 </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+            <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm">
               <h3 className="font-black text-lg mb-6 flex items-center gap-2"><Settings2 className="text-red-600" /> Sistema</h3>
               <div className="space-y-4">
                 <button onClick={exportData} className="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 py-4 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-200 transition-all">
@@ -337,7 +351,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
                 <button onClick={() => window.aistudio?.openSelectKey()} className="w-full bg-slate-900 hover:bg-black text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
                   <Key size={18} /> Chave API Google
                 </button>
-                <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">
+                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
                   <AlertCircle className="text-amber-600 flex-shrink-0" size={20} />
                   <div>
                     <p className="text-[10px] font-bold text-amber-700 uppercase mb-1">Aviso de Imagens</p>
