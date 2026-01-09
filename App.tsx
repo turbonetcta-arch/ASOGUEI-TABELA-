@@ -5,7 +5,7 @@ import { INITIAL_PRODUCTS, INITIAL_PROMOTIONS } from './constants';
 import AdminPanel from './components/AdminPanel';
 import TvView from './components/TvView';
 import RemoteController from './components/RemoteController';
-import { Home, Wifi, WifiOff, Globe } from 'lucide-react';
+import { Home, Wifi, WifiOff, Globe, Server } from 'lucide-react';
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<AppMode>(() => {
@@ -27,6 +27,8 @@ const App: React.FC = () => {
   });
 
   const [isOnline, setIsOnline] = useState(false);
+  const [remoteIp, setRemoteIp] = useState<string>('Detectando...');
+  const [activeDevices, setActiveDevices] = useState<any[]>([]);
   const socketRef = useRef<WebSocket | null>(null);
   const isInternalChange = useRef(false);
 
@@ -50,6 +52,13 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
+    fetch('https://api.ipify.org?format=json')
+      .then(res => res.json())
+      .then(data => setRemoteIp(data.ip))
+      .catch(() => setRemoteIp('Local WiFi'));
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('acougue_sync_code', syncCode);
   }, [syncCode]);
 
@@ -71,9 +80,14 @@ const App: React.FC = () => {
       ws.onopen = () => {
         setIsOnline(true);
         ws.send(JSON.stringify({ type: 'JOIN', room: syncCode }));
-        if (mode === 'ADMIN' || mode === 'CONTROLLER') {
-            ws.send(JSON.stringify({ type: 'UPDATE_STATE', room: syncCode, payload: state }));
-        }
+        
+        // Anuncia o dispositivo ao entrar
+        ws.send(JSON.stringify({
+          type: 'REMOTE_COMMAND',
+          room: syncCode,
+          command: 'DEVICE_ANNOUNCE',
+          payload: { id: Math.random().toString(36).substr(2, 4), mode, ip: remoteIp }
+        }));
       };
 
       ws.onmessage = (event) => {
@@ -92,6 +106,13 @@ const App: React.FC = () => {
               if (mode !== 'CONTROLLER') {
                 setMode(data.payload as AppMode);
               }
+            }
+            if (data.command === 'DEVICE_ANNOUNCE' && mode === 'ADMIN') {
+              setActiveDevices(prev => {
+                const exists = prev.find(d => d.id === data.payload.id);
+                if (exists) return prev;
+                return [...prev, data.payload];
+              });
             }
             if (data.command === 'FORCE_UPDATE' && data.payload) {
                 isInternalChange.current = true;
@@ -112,7 +133,18 @@ const App: React.FC = () => {
 
     connect();
     return () => socketRef.current?.close();
-  }, [syncCode, mode]);
+  }, [syncCode, mode, remoteIp]);
+
+  // Limpa lista de dispositivos periodicamente (simulação de timeout)
+  useEffect(() => {
+    if (mode === 'ADMIN') {
+      const interval = setInterval(() => {
+        setActiveDevices([]);
+        sendRemoteCommand('DEVICE_ANNOUNCE', { mode, ip: remoteIp, id: 'admin' });
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [mode, remoteIp]);
 
   useEffect(() => {
     localStorage.setItem('acougue_state', JSON.stringify(state));
@@ -126,29 +158,20 @@ const App: React.FC = () => {
     }
   }, [state, syncCode]);
 
-  useEffect(() => {
-    let wakeLock: any = null;
-    const requestWakeLock = async () => {
-      if ('wakeLock' in navigator && mode === 'TV') {
-        try { wakeLock = await (navigator as any).wakeLock.request('screen'); } 
-        catch (err) {}
-      }
-    };
-    if (mode === 'TV') requestWakeLock();
-    return () => { if (wakeLock) wakeLock.release(); };
-  }, [mode]);
-
   return (
     <div className={`relative min-h-screen bg-black transition-colors duration-500 overflow-x-hidden ${state.tvOrientation === 90 && mode === 'TV' ? 'overflow-hidden' : ''}`}>
       
-      <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 pointer-events-none shadow-2xl">
-        <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+      <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-4 px-4 py-2 rounded-full bg-black/80 backdrop-blur-2xl border border-white/10 pointer-events-none shadow-2xl transition-all">
         <div className="flex items-center gap-2">
-          {isOnline ? (
-            <><Wifi size={14} className="text-emerald-400" /> <span className="text-[9px] font-black text-white/80 uppercase tracking-[0.2em]">Rede Ativa: {syncCode}</span></>
-          ) : (
-            <><WifiOff size={14} className="text-red-400" /> <span className="text-[9px] font-black text-red-400 uppercase tracking-widest">Reconectando...</span></>
-          )}
+            <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+            <span className={`text-[10px] font-black uppercase tracking-widest ${isOnline ? 'text-emerald-400' : 'text-red-400'}`}>
+                {isOnline ? 'Cloud OK' : 'Offline'}
+            </span>
+        </div>
+        <div className="w-px h-3 bg-white/20" />
+        <div className="flex items-center gap-2">
+            <Server size={12} className="text-blue-400" />
+            <span className="text-[10px] font-bold text-white/60 font-mono tracking-tight">{remoteIp}</span>
         </div>
       </div>
 
@@ -160,12 +183,14 @@ const App: React.FC = () => {
           onEnterControllerMode={() => setMode('CONTROLLER')}
           isOnline={isOnline}
           sendRemoteCommand={sendRemoteCommand}
+          remoteIp={remoteIp}
+          activeDevices={activeDevices}
         />
       )}
       
       {mode === 'TV' && (
         <>
-          <TvView state={state} setState={setState} />
+          <TvView state={state} setState={setState} remoteIp={remoteIp} />
           <button 
             onClick={() => setMode('ADMIN')}
             className="fixed top-6 left-6 flex items-center gap-3 bg-black/30 hover:bg-black/80 text-white/40 hover:text-white px-6 py-3 rounded-2xl z-[101] transition-all opacity-0 hover:opacity-100 border border-white/10 backdrop-blur-md group"
@@ -182,12 +207,13 @@ const App: React.FC = () => {
           setState={setState} 
           onExit={() => setMode('ADMIN')}
           sendRemoteCommand={sendRemoteCommand}
+          remoteIp={remoteIp}
         />
       )}
 
       <div className={`fixed bottom-0 left-0 right-0 flex justify-center pb-1 pointer-events-none z-[9999] transition-opacity duration-1000 ${mode === 'TV' ? 'opacity-30' : 'opacity-60'}`}>
         <span className={`text-[10px] font-black uppercase tracking-[0.4em] ${mode === 'ADMIN' ? 'text-slate-400' : 'text-white/30'}`}>
-          Sincronização Fabio FCell • Cloud Active
+          Sistema Ativo • {remoteIp} • Fabio FCell
         </span>
       </div>
     </div>

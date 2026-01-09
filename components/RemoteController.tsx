@@ -1,16 +1,17 @@
 
 import React, { useState } from 'react';
 import { AppState, Product, Promotion } from '../types';
-import { ArrowLeft, Zap, Volume2, Star, X, Check, Package, Tag, Power, Monitor, Tv, Wifi, Globe } from 'lucide-react';
+import { ArrowLeft, Zap, Volume2, Star, X, Check, Package, Tag, Power, Monitor, Tv, Wifi, Globe, Server } from 'lucide-react';
 
 interface RemoteControllerProps {
   state: AppState;
   setState: React.Dispatch<React.SetStateAction<AppState>>;
   onExit: () => void;
   sendRemoteCommand?: (command: string, payload?: any) => void;
+  remoteIp?: string;
 }
 
-const RemoteController: React.FC<RemoteControllerProps> = ({ state, setState, onExit, sendRemoteCommand }) => {
+const RemoteController: React.FC<RemoteControllerProps> = ({ state, setState, onExit, sendRemoteCommand, remoteIp }) => {
   const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'PROMOS'>('PRODUCTS');
   const [showSuperOfferModal, setShowSuperOfferModal] = useState(false);
   const [lastCommand, setLastCommand] = useState<string | null>(null);
@@ -92,9 +93,8 @@ const RemoteController: React.FC<RemoteControllerProps> = ({ state, setState, on
   return (
     <div className="fixed inset-0 bg-[#0a0a0a] text-white flex flex-col font-sans select-none animate-in fade-in duration-300">
       
-      {/* STATUS DE COMANDO REMOTO */}
       {lastCommand && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] bg-emerald-600 text-white px-6 py-2 rounded-full font-black text-[10px] uppercase shadow-2xl animate-in slide-in-from-top duration-300 tracking-[0.2em]">
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[200] bg-emerald-600 text-white px-6 py-2 rounded-full font-black text-[10px] uppercase shadow-2xl animate-in slide-in-from-top duration-300 tracking-[0.2em]">
           {lastCommand}
         </div>
       )}
@@ -103,31 +103,30 @@ const RemoteController: React.FC<RemoteControllerProps> = ({ state, setState, on
         <div className="flex items-center justify-between">
           <button onClick={onExit} className="p-2 bg-white/5 rounded-full"><ArrowLeft size={24} /></button>
           <div className="text-center">
-            <h2 className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em] flex items-center justify-center gap-2">
-               <Globe size={10} /> Conexão WiFi Ativa
+            <h2 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] flex items-center justify-center gap-2">
+               <Server size={10} /> Terminal IP: {remoteIp}
             </h2>
             <p className="text-[11px] font-bold text-white/40 uppercase truncate max-w-[180px] mt-1">{state.storeName}</p>
           </div>
           <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center">
-             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+             <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
           </div>
         </div>
 
-        {/* CONTROLE DE ENERGIA DA TV (CENTRAL) */}
         <div className="grid grid-cols-2 gap-3">
             <button 
                 onClick={handleRemoteSetTvMode}
                 className="group flex flex-col items-center justify-center gap-2 bg-red-600 py-4 rounded-3xl font-black uppercase text-[10px] shadow-xl active:scale-95 transition-all border-b-4 border-red-800"
             >
                 <Power size={24} className="group-active:scale-110 transition-transform" />
-                ATIVAR TV
+                Ligar TV
             </button>
             <button 
                 onClick={handleRemoteSetAdminMode}
                 className="group flex flex-col items-center justify-center gap-2 bg-slate-800 py-4 rounded-3xl font-black uppercase text-[10px] shadow-xl active:scale-95 transition-all border-b-4 border-slate-900"
             >
                 <Monitor size={24} className="group-active:scale-110 transition-transform" />
-                ABRIR PAINEL
+                Painel
             </button>
         </div>
 
@@ -194,10 +193,10 @@ const RemoteController: React.FC<RemoteControllerProps> = ({ state, setState, on
 
       <footer className="fixed bottom-0 left-0 right-0 p-6 bg-[#141414]/90 backdrop-blur-2xl border-t border-white/5 flex flex-col gap-4 z-50">
         <button onClick={() => setShowSuperOfferModal(true)} className="w-full bg-yellow-400 text-black py-5 rounded-[2rem] font-black uppercase text-xs flex items-center justify-center gap-3 active:scale-95 transition-transform shadow-2xl shadow-yellow-900/40 border-b-4 border-yellow-600">
-          <Star size={20} className="fill-black" /> ATIVAR FLASH DO DIA
+          <Star size={20} className="fill-black" /> FLASH DO DIA
         </button>
         <div className="grid grid-cols-2 gap-4">
-          <button className="flex items-center justify-center gap-3 bg-white/5 py-4 rounded-2xl font-black uppercase text-[10px] text-white/40 active:bg-white/10" onClick={() => alert('Sinal enviado para TV!')}><Volume2 size={16} /> Chamar TV</button>
+          <button className="flex items-center justify-center gap-3 bg-white/5 py-4 rounded-2xl font-black uppercase text-[10px] text-white/40 active:bg-white/10" onClick={() => alert('Sinal enviado via Nuvem!')}><Volume2 size={16} /> Chamar TV</button>
           <button className="flex items-center justify-center gap-3 bg-blue-600 py-4 rounded-2xl font-black uppercase text-[10px] shadow-lg active:bg-blue-700" onClick={onExit}><Check size={16} /> Finalizar</button>
         </div>
       </footer>
@@ -207,7 +206,7 @@ const RemoteController: React.FC<RemoteControllerProps> = ({ state, setState, on
           <div className="flex justify-between items-center mb-10">
             <div>
               <h3 className="text-3xl font-black text-yellow-400 uppercase italic leading-none">Flash Especial</h3>
-              <p className="text-[10px] font-black text-white/30 uppercase mt-2 tracking-[0.3em]">Seleção de Destaque TV</p>
+              <p className="text-[10px] font-black text-white/30 uppercase mt-2 tracking-[0.3em]">Seleção Remota via {remoteIp}</p>
             </div>
             <button onClick={() => setShowSuperOfferModal(false)} className="p-4 bg-white/5 rounded-full text-white/40 hover:text-white"><X size={28} /></button>
           </div>
@@ -235,7 +234,7 @@ const RemoteController: React.FC<RemoteControllerProps> = ({ state, setState, on
               );
             })}
           </div>
-          <button onClick={() => setShowSuperOfferModal(false)} className="w-full bg-red-600 text-white py-5 rounded-[2rem] font-black uppercase text-sm mt-4 shadow-2xl border-b-4 border-red-800">Sincronizar com TV</button>
+          <button onClick={() => setShowSuperOfferModal(false)} className="w-full bg-red-600 text-white py-5 rounded-[2rem] font-black uppercase text-sm mt-4 shadow-2xl border-b-4 border-red-800">Enviar para TV</button>
         </div>
       )}
     </div>
