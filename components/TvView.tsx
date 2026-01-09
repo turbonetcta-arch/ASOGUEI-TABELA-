@@ -45,6 +45,10 @@ const TvView: React.FC<TvViewProps> = ({ state }) => {
   const currentPromo = activePromos[currentPromoIndex];
   const promoProduct = state.products.find(p => p.id === currentPromo?.productId);
   const superOfferProduct = state.products.find(p => p.id === state.superOffer.productId);
+  
+  // Busca a imagem da promoção para a super oferta, se existir
+  const superOfferPromo = state.promotions.find(p => p.productId === state.superOffer.productId);
+  const superOfferImage = superOfferPromo?.imageUrl || "https://images.unsplash.com/photo-1544025162-d76694265947?w=800&auto=format&fit=crop";
 
   const formatPrice = (price: number) => {
     const parts = price.toFixed(2).split('.');
@@ -69,13 +73,12 @@ const TvView: React.FC<TvViewProps> = ({ state }) => {
 
           <div className="flex-grow flex items-center justify-between px-[10vw] pt-[15vh]">
             <div className="w-[45%] flex flex-col items-center gap-[4vh]">
-               <div className="w-full aspect-square bg-white rounded-[5vh] shadow-2xl border-[2vh] border-white p-[2vh] transform -rotate-2">
-                 {/* Aqui usaria a imagem da promo se houvesse, ou uma genérica de carne */}
+               <div className="w-full aspect-square bg-white rounded-[5vh] shadow-2xl border-[2vh] border-white p-[2vh] transform -rotate-2 overflow-hidden">
                  <div className="w-full h-full bg-slate-100 rounded-[3vh] flex items-center justify-center overflow-hidden">
                     <img 
-                      src="https://images.unsplash.com/photo-1544025162-d76694265947?w=800&auto=format&fit=crop" 
-                      className="w-full h-full object-cover" 
-                      alt="Super Oferta"
+                      src={superOfferImage} 
+                      className="w-full h-full object-cover transition-transform duration-[10000ms] scale-110 hover:scale-125" 
+                      alt="Super Oferta IA"
                     />
                  </div>
                </div>
@@ -167,6 +170,7 @@ const TvView: React.FC<TvViewProps> = ({ state }) => {
 
         <footer className="h-[8vh] bg-[#ffd700] flex items-center justify-center relative">
           <span className="text-[3vh] font-black text-black uppercase tracking-[0.5em]">Tradição em cada corte</span>
+          <span className="absolute right-4 bottom-1 text-[1vh] font-bold text-black/20 uppercase tracking-widest">Fabio FCell</span>
         </footer>
       </div>
 
@@ -180,7 +184,7 @@ const TvView: React.FC<TvViewProps> = ({ state }) => {
           <div key={currentPromo.id} className="flex-grow flex flex-col items-center justify-center p-[4vw] pt-[12vh]">
             <div className="w-full h-[40vh] relative mb-[4vh]">
               <div className="relative w-full h-full bg-white rounded-[4vh] overflow-hidden shadow-2xl border-[1vh] border-white">
-                <img src={currentPromo.imageUrl} alt={promoProduct?.name} className="w-full h-full object-cover" />
+                <img src={currentPromo.imageUrl} alt={promoProduct?.name} className="w-full h-full object-cover transition-transform duration-[15000ms] scale-110 hover:scale-100" />
               </div>
             </div>
             <div className="text-center w-full space-y-[2vh]">
@@ -197,7 +201,7 @@ const TvView: React.FC<TvViewProps> = ({ state }) => {
                   </span>
                   <div className="flex flex-col">
                     <span className="text-[7vh] font-oswald font-black leading-none">,{formatPrice(currentPromo.offerPrice).decimal}</span>
-                    <span className="text-[2.5vh] font-bold uppercase tracking-wider text-[#ffd700]">por {promoProduct?.unit}</span>
+                    <span className="text-[2.5vh] font-bold uppercase tracking-wider text-yellow-400">por {promoProduct?.unit}</span>
                   </div>
                </div>
             </div>
