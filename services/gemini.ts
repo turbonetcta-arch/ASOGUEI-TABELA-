@@ -2,13 +2,8 @@
 import { GoogleGenAI } from "@google/genai";
 
 const ensureApiKey = async (): Promise<string> => {
-  if (typeof window !== 'undefined' && window.aistudio) {
-    const hasKey = await window.aistudio.hasSelectedApiKey();
-    if (!hasKey) {
-      await window.aistudio.openSelectKey();
-    }
-  }
-  // A chave é injetada automaticamente em process.env.API_KEY após o seletor
+  // Apenas retorna a chave injetada pelo sistema. 
+  // O controle de abertura do seletor agora é feito exclusivamente via UI no painel de configurações.
   return process.env.API_KEY || '';
 };
 
@@ -16,6 +11,8 @@ export const geminiService = {
   async generateCatchyDescription(productName: string): Promise<string> {
     try {
       const apiKey = await ensureApiKey();
+      if (!apiKey) throw new Error("API Key não configurada");
+      
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
@@ -33,35 +30,35 @@ export const geminiService = {
     highQuality: boolean = false, 
     aspectRatio: "1:1" | "16:9" | "4:3" | "3:4" | "9:16" = "1:1"
   ): Promise<string | null> {
-    const apiKey = await ensureApiKey();
-    if (!apiKey) return null;
+    try {
+      const apiKey = await ensureApiKey();
+      if (!apiKey) return null;
 
-    const tryGenerate = async (modelName: string) => {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-      const enhancedPrompt = prompt.length < 30 
-        ? `Professional commercial food photography of ${prompt}. Fresh meat, high quality, dark slate background, cinematic lighting, appetizing, 4k, macro shot.`
-        : prompt;
+      const tryGenerate = async (modelName: string) => {
+        const ai = new GoogleGenAI({ apiKey });
+        const enhancedPrompt = prompt.length < 30 
+          ? `Professional commercial food photography of ${prompt}. Fresh meat, high quality, dark slate background, cinematic lighting, appetizing, 4k, macro shot.`
+          : prompt;
 
-      const config: any = {
-        imageConfig: {
-          aspectRatio: aspectRatio
+        const config: any = {
+          imageConfig: {
+            aspectRatio: aspectRatio
+          }
+        };
+
+        if (modelName === 'gemini-3-pro-image-preview') {
+          config.imageConfig.imageSize = "1K";
         }
+
+        return await ai.models.generateContent({
+          model: modelName,
+          contents: {
+            parts: [{ text: enhancedPrompt }]
+          },
+          config: config
+        });
       };
 
-      if (modelName === 'gemini-3-pro-image-preview') {
-        config.imageConfig.imageSize = "1K";
-      }
-
-      return await ai.models.generateContent({
-        model: modelName,
-        contents: {
-          parts: [{ text: enhancedPrompt }]
-        },
-        config: config
-      });
-    };
-
-    try {
       const targetModel = highQuality ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
       let response = await tryGenerate(targetModel);
 
@@ -72,26 +69,6 @@ export const geminiService = {
       return null;
     } catch (error: any) {
       console.error("Gemini Image Error:", error);
-
-      if (error.message?.includes("403") || error.message?.includes("404") || error.message?.includes("400")) {
-        if (highQuality) {
-          try {
-            console.log("Tentando fallback para gemini-2.5-flash-image...");
-            const fallbackResponse = await tryGenerate('gemini-2.5-flash-image');
-            const part = fallbackResponse.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-            if (part?.inlineData) {
-              return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-            }
-          } catch (fallbackError) {
-            console.error("Fallback também falhou:", fallbackError);
-          }
-        }
-
-        if (error.message?.includes("403") && window.aistudio) {
-          alert("Sua chave de API não tem permissão para gerar imagens. Certifique-se de usar uma chave com faturamento ativo.");
-          await window.aistudio.openSelectKey();
-        }
-      }
       return null;
     }
   }

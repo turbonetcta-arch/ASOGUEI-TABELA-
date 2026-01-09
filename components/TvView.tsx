@@ -98,12 +98,7 @@ const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp }) => {
   return (
     <div className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center">
       
-      {/* INFO DE CONEXÃO TV (IP REMOTO) */}
-      <div className="fixed bottom-4 right-4 z-[110] flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 opacity-30">
-        <Server size={10} className="text-white" />
-        <span className="text-[10px] font-mono text-white/60 tracking-tight">{remoteIp}</span>
-      </div>
-
+      {/* Botões de controle de rotação - Invisíveis por padrão */}
       <div className="fixed top-6 right-6 z-[110] flex gap-2 opacity-0 hover:opacity-100 transition-opacity">
         <button onClick={() => handleRotate(0)} className={`p-3 rounded-xl border flex items-center gap-2 font-black text-xs uppercase transition-all ${state.tvOrientation === 0 ? 'bg-red-600 border-red-500' : 'bg-black/50 border-white/20 text-white/50'}`}>
           <RotateCcw size={16} /> Horizontal

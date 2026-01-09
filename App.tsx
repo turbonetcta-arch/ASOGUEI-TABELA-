@@ -104,7 +104,6 @@ const App: React.FC = () => {
             const { command, payload } = data;
 
             if (command === 'SET_MODE') {
-              // Se o comando for específico para um ID ou global
               if (!payload.targetId || payload.targetId === deviceId.current) {
                  if (mode !== 'CONTROLLER' && mode !== 'ADMIN') {
                     setMode(payload.mode);
@@ -144,7 +143,6 @@ const App: React.FC = () => {
     return () => socketRef.current?.close();
   }, [syncCode, mode, remoteIp]);
 
-  // Gerenciamento de status offline (se não houver anúncio em 40s)
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -173,19 +171,22 @@ const App: React.FC = () => {
   return (
     <div className={`relative min-h-screen bg-black transition-colors duration-500 overflow-x-hidden ${state.tvOrientation === 90 && mode === 'TV' ? 'overflow-hidden' : ''}`}>
       
-      <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-4 px-5 py-2.5 rounded-full bg-black/80 backdrop-blur-2xl border border-white/10 pointer-events-none shadow-2xl transition-all">
-        <div className="flex items-center gap-2">
-            <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.8)]' : 'bg-red-500'}`} />
-            <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isOnline ? 'text-emerald-400' : 'text-red-400'}`}>
-                {isOnline ? 'SERVIDOR FABIO FCELL ATIVO' : 'CONEXÃO INTERROMPIDA'}
-            </span>
+      {/* Barra de Status - Oculta no modo TV para visual limpo */}
+      {mode !== 'TV' && (
+        <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-4 px-5 py-2.5 rounded-full bg-black/80 backdrop-blur-2xl border border-white/10 pointer-events-none shadow-2xl transition-all">
+          <div className="flex items-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.8)]' : 'bg-red-500'}`} />
+              <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isOnline ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {isOnline ? 'SERVIDOR FABIO FCELL ATIVO' : 'CONEXÃO INTERROMPIDA'}
+              </span>
+          </div>
+          <div className="w-px h-3 bg-white/20" />
+          <div className="flex items-center gap-2">
+              <Server size={12} className="text-blue-400" />
+              <span className="text-[10px] font-bold text-white/60 font-mono tracking-tight">{remoteIp}</span>
+          </div>
         </div>
-        <div className="w-px h-3 bg-white/20" />
-        <div className="flex items-center gap-2">
-            <Server size={12} className="text-blue-400" />
-            <span className="text-[10px] font-bold text-white/60 font-mono tracking-tight">{remoteIp}</span>
-        </div>
-      </div>
+      )}
 
       {mode === 'ADMIN' && (
         <AdminPanel 
