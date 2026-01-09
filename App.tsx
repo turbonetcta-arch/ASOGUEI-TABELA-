@@ -5,7 +5,7 @@ import { INITIAL_PRODUCTS, INITIAL_PROMOTIONS } from './constants';
 import AdminPanel from './components/AdminPanel';
 import TvView from './components/TvView';
 import RemoteController from './components/RemoteController';
-import { Home, Wifi, WifiOff } from 'lucide-react';
+import { Home, Wifi, WifiOff, Globe } from 'lucide-react';
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<AppMode>(() => {
@@ -53,7 +53,6 @@ const App: React.FC = () => {
     localStorage.setItem('acougue_sync_code', syncCode);
   }, [syncCode]);
 
-  // Função para enviar comandos específicos para outros dispositivos na mesma sala (Cloud Sync)
   const sendRemoteCommand = (command: string, payload?: any) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({
@@ -67,7 +66,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const connect = () => {
-      // Usando relay de WebSocket para comunicação via Internet
       const ws = new WebSocket('wss://socketsbay.com/wss/v2/1/demo/');
       
       ws.onopen = () => {
@@ -83,20 +81,22 @@ const App: React.FC = () => {
           const data = JSON.parse(event.data);
           if (data.room !== syncCode) return;
 
-          // Processar atualização de estado (preços, ofertas)
           if (data.type === 'UPDATE_STATE') {
             isInternalChange.current = true;
             setState(data.payload);
             setTimeout(() => { isInternalChange.current = false; }, 100);
           }
 
-          // Processar comandos remotos (como mudar de modo)
           if (data.type === 'REMOTE_COMMAND') {
             if (data.command === 'SET_MODE' && data.payload) {
-              // Apenas dispositivos em modo ADMIN ou TV mudam de modo via comando remoto
               if (mode !== 'CONTROLLER') {
                 setMode(data.payload as AppMode);
               }
+            }
+            if (data.command === 'FORCE_UPDATE' && data.payload) {
+                isInternalChange.current = true;
+                setState(data.payload);
+                setTimeout(() => { isInternalChange.current = false; }, 100);
             }
           }
         } catch (e) {}
@@ -112,7 +112,7 @@ const App: React.FC = () => {
 
     connect();
     return () => socketRef.current?.close();
-  }, [syncCode, mode]); // Adicionado mode para garantir que o listener saiba em que estado está
+  }, [syncCode, mode]);
 
   useEffect(() => {
     localStorage.setItem('acougue_state', JSON.stringify(state));
@@ -141,12 +141,15 @@ const App: React.FC = () => {
   return (
     <div className={`relative min-h-screen bg-black transition-colors duration-500 overflow-x-hidden ${state.tvOrientation === 90 && mode === 'TV' ? 'overflow-hidden' : ''}`}>
       
-      <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md border border-white/10 pointer-events-none shadow-2xl">
-        {isOnline ? (
-          <><Wifi size={12} className="text-emerald-500" /> <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Cloud Sync: {syncCode}</span></>
-        ) : (
-          <><WifiOff size={12} className="text-red-500" /> <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">Offline...</span></>
-        )}
+      <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 pointer-events-none shadow-2xl">
+        <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+        <div className="flex items-center gap-2">
+          {isOnline ? (
+            <><Wifi size={14} className="text-emerald-400" /> <span className="text-[9px] font-black text-white/80 uppercase tracking-[0.2em]">Rede Ativa: {syncCode}</span></>
+          ) : (
+            <><WifiOff size={14} className="text-red-400" /> <span className="text-[9px] font-black text-red-400 uppercase tracking-widest">Reconectando...</span></>
+          )}
+        </div>
       </div>
 
       {mode === 'ADMIN' && (
@@ -155,6 +158,8 @@ const App: React.FC = () => {
           setState={setState} 
           onEnterTvMode={() => setMode('TV')} 
           onEnterControllerMode={() => setMode('CONTROLLER')}
+          isOnline={isOnline}
+          sendRemoteCommand={sendRemoteCommand}
         />
       )}
       
@@ -166,7 +171,7 @@ const App: React.FC = () => {
             className="fixed top-6 left-6 flex items-center gap-3 bg-black/30 hover:bg-black/80 text-white/40 hover:text-white px-6 py-3 rounded-2xl z-[101] transition-all opacity-0 hover:opacity-100 border border-white/10 backdrop-blur-md group"
           >
             <Home size={24} />
-            <span className="font-bold text-sm uppercase tracking-widest">Voltar ao Painel</span>
+            <span className="font-bold text-sm uppercase tracking-widest">Sair da TV</span>
           </button>
         </>
       )}
@@ -182,7 +187,7 @@ const App: React.FC = () => {
 
       <div className={`fixed bottom-0 left-0 right-0 flex justify-center pb-1 pointer-events-none z-[9999] transition-opacity duration-1000 ${mode === 'TV' ? 'opacity-30' : 'opacity-60'}`}>
         <span className={`text-[10px] font-black uppercase tracking-[0.4em] ${mode === 'ADMIN' ? 'text-slate-400' : 'text-white/30'}`}>
-          Remoto Ativo • {syncCode}
+          Sincronização Fabio FCell • Cloud Active
         </span>
       </div>
     </div>
