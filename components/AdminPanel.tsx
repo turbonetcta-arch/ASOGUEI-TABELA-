@@ -7,7 +7,7 @@ import {
   Smartphone, Download, Wand2, FileUp, AlertCircle,
   RotateCcw, RotateCw, Monitor, Search, X, MonitorPlay,
   ChevronDown, ChevronUp, MousePointerSquareDashed, Star,
-  Link2, RefreshCcw
+  Link2, RefreshCcw, Home, ArrowUp, ArrowDown, Layout
 } from 'lucide-react';
 import { geminiService } from '../services/gemini';
 
@@ -90,6 +90,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
       ...prev,
       promotions: prev.promotions.map(p => p.id === id ? { ...p, ...updates } : p)
     }));
+  };
+
+  const movePromo = (index: number, direction: 'UP' | 'DOWN') => {
+    if (navigator.vibrate) navigator.vibrate(40);
+    const newPromos = [...state.promotions];
+    if (direction === 'UP' && index > 0) {
+      [newPromos[index], newPromos[index - 1]] = [newPromos[index - 1], newPromos[index]];
+    } else if (direction === 'DOWN' && index < newPromos.length - 1) {
+      [newPromos[index], newPromos[index + 1]] = [newPromos[index + 1], newPromos[index]];
+    }
+    setState(prev => ({ ...prev, promotions: newPromos }));
   };
 
   const toggleSuperOfferProduct = (product: Product, discountPercent: number) => {
@@ -329,8 +340,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
         )}
 
         {activeTab === 'PROMOS' && (
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
-            <div ref={promosStartRef} className="md:col-span-2 flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col gap-6 pb-20">
+            <div ref={promosStartRef} className="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
               <div>
                 <h2 className="text-2xl font-black text-slate-800 tracking-tight">Ofertas em Destaque</h2>
                 <p className="text-xs text-slate-400 font-bold uppercase mt-1">Gerencie as promoções que aparecem na TV</p>
@@ -369,92 +380,146 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
               </div>
             </div>
             
-            {state.promotions.length === 0 && (
-              <div className="md:col-span-2 py-20 flex flex-col items-center justify-center text-slate-400 bg-white rounded-[3rem] border-2 border-dashed border-slate-200">
+            {state.promotions.length === 0 ? (
+              <div className="py-20 flex flex-col items-center justify-center text-slate-400 bg-white rounded-[3rem] border-2 border-dashed border-slate-200">
                 <Tag size={48} className="mb-4 opacity-20" />
                 <p className="font-bold text-lg">Nenhuma promoção ativa</p>
                 <p className="text-sm">Clique em "Nova Promoção" para começar.</p>
               </div>
-            )}
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {state.promotions.map((promo, index) => {
+                  const product = state.products.find(p => p.id === promo.productId);
+                  const isImg11Loading = loadingIds.has(`${promo.id}-IMG_1_1`);
+                  const isImg169Loading = loadingIds.has(`${promo.id}-IMG_16_9`);
+                  const isDescLoading = loadingIds.has(`${promo.id}-DESC`);
 
-            {state.promotions.map(promo => {
-              const product = state.products.find(p => p.id === promo.productId);
-              const isImg11Loading = loadingIds.has(`${promo.id}-IMG_1_1`);
-              const isImg169Loading = loadingIds.has(`${promo.id}-IMG_16_9`);
-              const isDescLoading = loadingIds.has(`${promo.id}-DESC`);
-
-              return (
-                <div key={promo.id} className="bg-white rounded-3xl border border-slate-200 p-5 flex flex-col gap-4 shadow-sm relative group animate-in zoom-in-95 fade-in duration-300">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="w-full sm:w-32 h-40 sm:h-32 rounded-2xl bg-slate-100 overflow-hidden relative border-2 border-slate-100 flex-shrink-0 group/img shadow-sm">
-                      <img src={promo.imageUrl} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/img:opacity-100 flex flex-wrap items-center justify-center text-white transition-opacity gap-3 p-2">
+                  return (
+                    <div key={promo.id} className="bg-white rounded-3xl border border-slate-200 p-5 flex flex-col gap-4 shadow-sm relative animate-in zoom-in-95 duration-300">
+                      
+                      {/* CONTROLES DE ORDENAÇÃO - SEMPRE VISÍVEIS */}
+                      <div className="absolute top-2 right-12 flex items-center gap-1.5 z-10">
                         <button 
-                          onClick={() => handleAiAction(promo.id, 'IMG_1_1', product?.name || 'Carne')}
-                          disabled={isImg11Loading || isImg169Loading}
-                          className="flex flex-col items-center gap-1 hover:text-red-400 transition-colors"
-                          title="IA Formato Quadrado"
+                          disabled={index === 0}
+                          onClick={() => movePromo(index, 'UP')}
+                          className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100 disabled:opacity-20 flex items-center justify-center transition-all shadow-sm active:scale-90"
+                          title="Mover para cima"
                         >
-                          {isImg11Loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                          <span className="text-[7px] font-black uppercase tracking-widest">1:1</span>
+                          <ArrowUp size={16} />
                         </button>
                         <button 
-                          onClick={() => handleAiAction(promo.id, 'IMG_16_9', product?.name || 'Carne')}
-                          disabled={isImg11Loading || isImg169Loading}
-                          className="flex flex-col items-center gap-1 hover:text-red-400 transition-colors"
-                          title="IA Formato Paisagem"
+                          disabled={index === state.promotions.length - 1}
+                          onClick={() => movePromo(index, 'DOWN')}
+                          className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100 disabled:opacity-20 flex items-center justify-center transition-all shadow-sm active:scale-90"
+                          title="Mover para baixo"
                         >
-                          {isImg169Loading ? <Loader2 size={18} className="animate-spin" /> : <MonitorPlay size={18} />}
-                          <span className="text-[7px] font-black uppercase tracking-widest">16:9</span>
-                        </button>
-                        <button 
-                          onClick={() => triggerManualUpload(promo.id)}
-                          className="flex flex-col items-center gap-1 hover:text-blue-400 transition-colors w-full border-t border-white/20 pt-2"
-                        >
-                          <FileUp size={18} />
-                          <span className="text-[7px] font-black uppercase tracking-widest">Subir Foto</span>
+                          <ArrowDown size={16} />
                         </button>
                       </div>
-                    </div>
-                    <div className="flex-grow space-y-3">
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black text-slate-400 uppercase">Produto Vinculado</label>
-                        <select value={promo.productId} onChange={e => updatePromo(promo.id, { productId: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl px-3 py-2.5 text-xs font-bold outline-none">
-                          {state.products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-slate-50 p-2 px-3 rounded-xl border border-slate-100">
-                          <label className="text-[9px] font-black text-slate-400 uppercase block">Oferta R$</label>
-                          <input type="number" step="0.01" value={promo.offerPrice} onChange={e => updatePromo(promo.id, { offerPrice: parseFloat(e.target.value) || 0 })} className="w-full bg-transparent text-sm font-black outline-none" />
+
+                      <div className="flex flex-col sm:flex-row gap-5">
+                        <div className="relative flex-shrink-0 group/img">
+                          <div className="w-full sm:w-36 h-44 sm:h-44 rounded-2xl bg-slate-100 overflow-hidden border-2 border-slate-100 shadow-sm transition-transform group-hover/img:scale-[1.02]">
+                            <img src={promo.imageUrl} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity">
+                              <button 
+                                onClick={() => triggerManualUpload(promo.id)}
+                                className="bg-white/90 text-slate-900 p-2.5 rounded-full shadow-xl hover:bg-white active:scale-95 transition-all"
+                              >
+                                <FileUp size={20} />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="absolute -bottom-2 -right-2 bg-white border border-slate-200 p-1 rounded-lg shadow-md">
+                             <Layout size={14} className="text-slate-400" />
+                          </div>
                         </div>
-                        <button 
-                          onClick={() => handleAiAction(promo.id, 'DESC', product?.name || 'Carne')} 
-                          disabled={isDescLoading}
-                          className="bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase border border-blue-100 hover:bg-blue-100 transition-colors"
-                        >
-                          {isDescLoading ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />} Frase IA
-                        </button>
+
+                        <div className="flex-grow space-y-3 pt-4 sm:pt-0">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Arte por IA (Gerar Novo)</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button 
+                                  onClick={() => handleAiAction(promo.id, 'IMG_1_1', product?.name || 'Carne')}
+                                  disabled={isImg11Loading || isImg169Loading}
+                                  className="flex items-center justify-center gap-2 bg-slate-900 hover:bg-black text-white py-2.5 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all disabled:opacity-50"
+                                >
+                                  {isImg11Loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} className="text-yellow-400" />}
+                                  <span>Arte 1:1</span>
+                                </button>
+                                <button 
+                                  onClick={() => handleAiAction(promo.id, 'IMG_16_9', product?.name || 'Carne')}
+                                  disabled={isImg11Loading || isImg169Loading}
+                                  className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all disabled:opacity-50"
+                                >
+                                  {isImg169Loading ? <Loader2 size={12} className="animate-spin" /> : <MonitorPlay size={12} />}
+                                  <span>Arte 16:9</span>
+                                </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black text-slate-400 uppercase">Produto</label>
+                            <select value={promo.productId} onChange={e => updatePromo(promo.id, { productId: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-red-200">
+                              {state.products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-slate-50 p-2 px-3 rounded-xl border border-slate-100">
+                              <label className="text-[9px] font-black text-slate-400 uppercase block">Oferta R$</label>
+                              <input type="number" step="0.01" value={promo.offerPrice} onChange={e => updatePromo(promo.id, { offerPrice: parseFloat(e.target.value) || 0 })} className="w-full bg-transparent text-sm font-black outline-none" />
+                            </div>
+                            <button 
+                              onClick={() => handleAiAction(promo.id, 'DESC', product?.name || 'Carne')} 
+                              disabled={isDescLoading}
+                              className="bg-red-50 text-red-600 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase border border-red-100 hover:bg-red-100 transition-colors"
+                            >
+                              {isDescLoading ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />} Frase IA
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-3 pt-1">
+                            <ToggleSwitch checked={promo.isActive} onChange={(val) => updatePromo(promo.id, { isActive: val })} />
+                            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">{promo.isActive ? 'Ativo na TV' : 'Pausado'}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 pt-1">
-                        <ToggleSwitch checked={promo.isActive} onChange={(val) => updatePromo(promo.id, { isActive: val })} />
-                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">{promo.isActive ? 'Ativo na TV' : 'Pausado'}</span>
-                      </div>
+
+                      <textarea value={promo.description} onChange={e => updatePromo(promo.id, { description: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-xs outline-none h-20 resize-none mt-2 focus:border-red-200 focus:bg-white transition-all" placeholder="Frase de marketing..." />
+                      
+                      <button 
+                        onClick={() => setState(prev => ({...prev, promotions: prev.promotions.filter(item => item.id !== promo.id)}))} 
+                        className="absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
-                  </div>
-                  <textarea value={promo.description} onChange={e => updatePromo(promo.id, { description: e.target.value })} className="w-full bg-slate-50 border rounded-xl px-4 py-3 text-xs outline-none h-20 resize-none focus:border-red-200 transition-colors" placeholder="Frase de marketing..." />
-                  <button onClick={() => setState(prev => ({...prev, promotions: prev.promotions.filter(item => item.id !== promo.id)}))} className="absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
-                </div>
-              );
-            })}
-            <div ref={promosEndRef} className="h-4 w-full" />
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* BOTÃO "LAR" / VOLTA PARA CIMA */}
+            {state.promotions.length > 2 && (
+              <div className="flex justify-center mt-6">
+                <button 
+                  onClick={scrollToTop}
+                  className="bg-white border-2 border-slate-900 text-slate-900 px-8 py-4 rounded-[2rem] font-black uppercase text-xs flex items-center gap-3 shadow-lg transition-all active:scale-95 group hover:bg-slate-900 hover:text-white"
+                >
+                  <Home size={18} className="group-hover:-translate-y-1 transition-transform" />
+                  Voltar para Cima
+                </button>
+              </div>
+            )}
+            
+            <div ref={promosEndRef} className="h-10 w-full" />
           </div>
         )}
 
         {activeTab === 'SETTINGS' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-2xl mx-auto space-y-6">
             
-            {/* NOVO CARD DE SINCRONIZAÇÃO CLOUD */}
             <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm relative overflow-hidden">
                <div className="absolute top-0 right-0 p-4 bg-emerald-50 text-emerald-600 rounded-bl-3xl">
                   <Link2 size={24} />
