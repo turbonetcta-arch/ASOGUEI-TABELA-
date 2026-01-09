@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppState } from '../types';
-import { Clock, Star, Flame, RotateCcw, RotateCw } from 'lucide-react';
+import { Clock, Star, Flame, RotateCcw, RotateCw, Tag } from 'lucide-react';
 
 interface TvViewProps {
   state: AppState;
@@ -51,7 +51,7 @@ const TvView: React.FC<TvViewProps> = ({ state, setState }) => {
     return () => clearInterval(interval);
   }, [state.superOffer.isActive, activeSuperOffers.length, state.promoInterval]);
 
-  // Rolagem de Preços
+  // Lógica de Rolagem de Preços (Ticker)
   useEffect(() => {
     let animationFrame: number;
     let position = 0;
@@ -100,19 +100,19 @@ const TvView: React.FC<TvViewProps> = ({ state, setState }) => {
 
   return (
     <div className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center">
-      {/* Botões de Rotação Flutuantes */}
+      {/* Botões de Rotação Flutuantes (Invisíveis por padrão) */}
       <div className="fixed top-6 right-6 z-[110] flex gap-2 opacity-0 hover:opacity-100 transition-opacity">
         <button onClick={() => handleRotate(0)} className={`p-3 rounded-xl border flex items-center gap-2 font-black text-xs uppercase transition-all ${state.tvOrientation === 0 ? 'bg-red-600 border-red-500' : 'bg-black/50 border-white/20 text-white/50'}`}>
-          <RotateCcw size={16} /> 360°
+          <RotateCcw size={16} /> Horizontal
         </button>
         <button onClick={() => handleRotate(90)} className={`p-3 rounded-xl border flex items-center gap-2 font-black text-xs uppercase transition-all ${state.tvOrientation === 90 ? 'bg-red-600 border-red-500' : 'bg-black/50 border-white/20 text-white/50'}`}>
-          <RotateCw size={16} /> 90°
+          <RotateCw size={16} /> Vertical
         </button>
       </div>
 
       <div style={rotationStyles} className="bg-[#0a0a0a] flex flex-row select-none text-white relative transition-all duration-700">
         
-        {/* OVERLAY: MULTI SUPER OFERTAS */}
+        {/* OVERLAY: MULTI SUPER OFERTAS (FLASH) */}
         {state.superOffer.isActive && currentSuper && (
           <div className="fixed inset-0 z-[100] bg-yellow-400 flex flex-col animate-in zoom-in duration-500">
             <div className="absolute top-0 left-0 right-0 h-[20vh] bg-red-600 flex items-center justify-center shadow-2xl overflow-hidden">
@@ -159,7 +159,7 @@ const TvView: React.FC<TvViewProps> = ({ state, setState }) => {
           </div>
         )}
 
-        {/* LADO ESQUERDO: PREÇOS */}
+        {/* LADO ESQUERDO: LISTA DE PREÇOS */}
         <div className="w-[55%] h-full flex flex-col bg-gradient-to-b from-[#1a0505] to-[#0a0000] border-r-[0.5vh] border-[#ffd700]/30 relative overflow-hidden">
           <header className="h-[15vh] flex items-center justify-between px-[3vw] bg-black/40 border-b border-white/5 z-20">
             <div className="flex flex-col">
@@ -171,6 +171,7 @@ const TvView: React.FC<TvViewProps> = ({ state, setState }) => {
               <span className="text-[4vh] font-oswald font-bold text-white">{currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
           </header>
+          
           <div ref={productContainerRef} className="flex-grow px-[3vw] py-[2vh] relative overflow-hidden">
             <div ref={productListRef} className="grid grid-cols-1 gap-[0.8vh] transition-transform duration-100 ease-linear" style={{ transform: `translateY(-${productScrollY}px)` }}>
               {state.products.map((product) => (
@@ -187,71 +188,75 @@ const TvView: React.FC<TvViewProps> = ({ state, setState }) => {
               ))}
             </div>
           </div>
+          
           <footer className="h-[8vh] bg-[#ffd700] flex items-center justify-center relative z-20">
-            <span className="text-[3vh] font-black text-black uppercase tracking-[0.5em]">Tradição em cada corte</span>
+            <span className="text-[3vh] font-black text-black uppercase tracking-[0.5em]">O Melhor Preço do Dia</span>
           </footer>
         </div>
 
-        {/* LADO DIREITO: OFERTAS + BARRA LATERAL */}
-        <div className="w-[45%] h-full relative bg-[#ffd700] flex flex-row overflow-hidden">
+        {/* LADO DIREITO: OFERTA EM DESTAQUE (SÓ A OFERTA, SEM BARRA LATERAL) */}
+        <div className="w-[45%] h-full relative bg-[#ffd700] flex flex-col overflow-hidden">
           
-          {/* BARRA LATERAL DE ROLAGEM DE OFERTAS */}
-          <div className="w-[20%] h-full bg-black/10 backdrop-blur-sm flex flex-col items-center py-4 gap-4 overflow-y-auto border-r border-black/5">
-            {activePromos.map((promo, idx) => (
-              <div 
-                key={promo.id} 
-                onClick={() => setCurrentPromoIndex(idx)}
-                className={`w-16 h-16 rounded-2xl overflow-hidden border-4 transition-all duration-500 cursor-pointer flex-shrink-0 ${idx === currentPromoIndex ? 'border-red-600 scale-110 shadow-lg' : 'border-white/20 opacity-40 scale-90'}`}
-              >
-                <img src={promo.imageUrl} className="w-full h-full object-cover" />
-              </div>
-            ))}
+          {/* TÍTULO DA OFERTA */}
+          <div className="absolute top-0 left-0 right-0 bg-red-700 py-[4vh] shadow-xl z-20 transform -skew-y-2 -mt-[1.5vh]">
+            <h2 className="text-[6.5vh] font-oswald font-black text-white text-center uppercase tracking-tighter italic transform skew-y-2">Oferta Especial</h2>
           </div>
-
-          {/* ÁREA DA OFERTA EM DESTAQUE */}
-          <div className="flex-grow relative flex flex-col h-full">
-            <div className="absolute top-0 left-0 right-0 bg-red-700 py-[3vh] shadow-xl z-20 transform -skew-y-2 -mt-[1vh]">
-              <h2 className="text-[6vh] font-oswald font-black text-white text-center uppercase tracking-tighter italic transform skew-y-2">Oferta Especial</h2>
-            </div>
-            
-            <div className="flex-grow relative">
-              {activePromos.map((promo, idx) => {
+          
+          <div className="flex-grow relative flex flex-col">
+            {activePromos.length > 0 ? (
+              activePromos.map((promo, idx) => {
                 const product = state.products.find(p => p.id === promo.productId);
                 const isActive = idx === currentPromoIndex;
                 return (
-                  <div key={promo.id} className={`absolute inset-0 flex flex-col items-center justify-center p-[3vw] pt-[12vh] transition-all duration-700 ${isActive ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-full opacity-0 scale-90'}`}>
-                    <div className="w-full h-[40vh] mb-[4vh]">
-                      <div className="w-full h-full bg-white rounded-[4vh] overflow-hidden shadow-2xl border-[1vh] border-white">
+                  <div 
+                    key={promo.id} 
+                    className={`absolute inset-0 flex flex-col items-center justify-center p-[4vw] pt-[15vh] transition-all duration-1000 ${isActive ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-20 opacity-0 scale-95 pointer-events-none'}`}
+                  >
+                    {/* IMAGEM DO PRODUTO */}
+                    <div className="w-full h-[42vh] mb-[4vh] transform hover:scale-[1.02] transition-transform duration-500">
+                      <div className="w-full h-full bg-white rounded-[5vh] overflow-hidden shadow-2xl border-[1.2vh] border-white">
                         <img src={promo.imageUrl} className="w-full h-full object-cover" />
                       </div>
                     </div>
-                    <div className="text-center w-full space-y-[2vh]">
-                      <h3 className="text-[7vh] font-oswald font-black text-red-900 uppercase leading-none">{product?.name}</h3>
-                      <div className="bg-red-900 text-white px-6 py-2 rounded-xl inline-block max-w-full">
-                        <p className="text-[2.5vh] font-bold italic truncate">"{promo.description}"</p>
+
+                    {/* TEXTO DA OFERTA */}
+                    <div className="text-center w-full space-y-[2.5vh] mb-[4vh]">
+                      <h3 className="text-[8vh] font-oswald font-black text-red-900 uppercase leading-none tracking-tight">{product?.name}</h3>
+                      <div className="bg-red-900 text-white px-8 py-3 rounded-2xl inline-block max-w-[90%] shadow-lg border-l-[1vh] border-white/30">
+                        <p className="text-[2.8vh] font-bold italic truncate">"{promo.description}"</p>
                       </div>
                     </div>
-                    <div className="mt-auto mb-4 w-full flex items-center justify-center bg-red-700 text-white py-6 rounded-[3vh] shadow-xl">
+
+                    {/* PREÇO DA OFERTA */}
+                    <div className="mt-auto mb-[2vh] w-full flex items-center justify-center bg-red-700 text-white py-[5vh] rounded-[4vh] shadow-2xl border-b-[1.5vh] border-red-900">
                       <div className="flex items-start">
-                        <span className="text-[4vh] font-black mt-[2vh] mr-2">R$</span>
-                        <span className="text-[14vh] font-oswald font-black leading-none">{formatPrice(promo.offerPrice).integer}</span>
+                        <span className="text-[4.5vh] font-black mt-[2.5vh] mr-3">R$</span>
+                        <span className="text-[16vh] font-oswald font-black leading-none tracking-tighter">{formatPrice(promo.offerPrice).integer}</span>
                         <div className="flex flex-col">
-                          <span className="text-[7vh] font-oswald font-black">,{formatPrice(promo.offerPrice).decimal}</span>
-                          <span className="text-[2.5vh] font-bold uppercase text-yellow-400">por {product?.unit}</span>
+                          <span className="text-[8vh] font-oswald font-black leading-none">,{formatPrice(promo.offerPrice).decimal}</span>
+                          <span className="text-[3vh] font-bold uppercase text-yellow-400 mt-1">por {product?.unit}</span>
                         </div>
                       </div>
                     </div>
                   </div>
                 );
-              })}
-            </div>
+              })
+            ) : (
+              <div className="flex-grow flex items-center justify-center text-red-900/20">
+                <Tag size="20vh" className="animate-pulse" />
+              </div>
+            )}
           </div>
+
+          <footer className="h-[6vh] bg-black/5 flex items-center justify-center">
+            <span className="text-[2vh] font-black text-red-900/40 uppercase tracking-[0.3em]">Qualidade Garantida Fabio FCell</span>
+          </footer>
         </div>
       </div>
 
       <style>{`
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        .animate-marquee { display: flex; animation: marquee 20s linear infinite; }
+        .animate-marquee { display: flex; animation: marquee 25s linear infinite; }
       `}</style>
     </div>
   );

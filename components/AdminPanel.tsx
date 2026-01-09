@@ -7,7 +7,8 @@ import {
   Smartphone, Download, Wand2, FileUp, AlertCircle,
   RotateCcw, RotateCw, Monitor, Search, X, MonitorPlay,
   ChevronDown, ChevronUp, MousePointerSquareDashed, Star,
-  Link2, RefreshCcw, Home, ArrowUp, ArrowDown, Layout
+  Link2, RefreshCcw, Home, ArrowUp, ArrowDown, Layout,
+  QrCode, ChevronLast, ChevronFirst
 } from 'lucide-react';
 import { geminiService } from '../services/gemini';
 
@@ -40,6 +41,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
   const [activePromoUploadId, setActivePromoUploadId] = useState<string | null>(null);
 
   const syncCode = localStorage.getItem('acougue_sync_code') || '';
+  const controllerUrl = useMemo(() => {
+    return `${window.location.origin}${window.location.pathname}?sync=${syncCode}&mode=controller`;
+  }, [syncCode]);
 
   useEffect(() => {
     setSaveStatus('SAVING');
@@ -55,10 +59,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
 
   const scrollToBottom = () => {
     promosEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (navigator.vibrate) navigator.vibrate(20);
   };
 
   const scrollToTop = () => {
     promosStartRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (navigator.vibrate) navigator.vibrate(20);
   };
 
   const exportData = () => {
@@ -171,6 +177,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
       isActive: true
     };
     setState(prev => ({ ...prev, promotions: [newPromo, ...prev.promotions] }));
+    // Pequeno atraso para garantir que o elemento foi renderizado
+    setTimeout(scrollToTop, 100);
   };
 
   const handleAiAction = async (promoId: string, type: 'DESC' | 'IMG_1_1' | 'IMG_16_9', productName: string) => {
@@ -236,6 +244,35 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
           </button>
         </div>
       </header>
+
+      {/* BOTÕES DE ROLAGEM FLUTUANTES (LADO DIREITO) - APENAS NA ABA PROMOS */}
+      {activeTab === 'PROMOS' && state.promotions.length > 2 && (
+        <div className="fixed right-4 bottom-24 flex flex-col gap-3 z-[60] animate-in slide-in-from-right duration-500">
+          <button 
+            onClick={scrollToTop}
+            className="w-12 h-12 bg-white/80 backdrop-blur-md border border-slate-200 rounded-full shadow-xl flex items-center justify-center text-slate-600 hover:text-red-600 hover:scale-110 active:scale-90 transition-all group"
+            title="Ir para o topo"
+          >
+            <ChevronFirst size={24} className="group-hover:-translate-y-0.5 transition-transform" />
+          </button>
+          
+          <button 
+            onClick={addPromo}
+            className="w-12 h-12 bg-red-600 rounded-full shadow-2xl flex items-center justify-center text-white hover:bg-red-700 hover:scale-110 active:scale-90 transition-all"
+            title="Adicionar Nova Oferta"
+          >
+            <Plus size={24} />
+          </button>
+
+          <button 
+            onClick={scrollToBottom}
+            className="w-12 h-12 bg-white/80 backdrop-blur-md border border-slate-200 rounded-full shadow-xl flex items-center justify-center text-slate-600 hover:text-red-600 hover:scale-110 active:scale-90 transition-all group"
+            title="Ir para o final"
+          >
+            <ChevronLast size={24} className="group-hover:translate-y-0.5 transition-transform" />
+          </button>
+        </div>
+      )}
 
       <main className="flex-grow p-4 md:p-6 max-w-6xl mx-auto w-full">
         <nav className="flex gap-1 bg-white p-1 rounded-2xl border border-slate-200 w-full md:w-fit mb-8 shadow-sm overflow-x-auto sticky top-[90px] md:top-[100px] z-20">
@@ -524,20 +561,37 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
                <div className="absolute top-0 right-0 p-4 bg-emerald-50 text-emerald-600 rounded-bl-3xl">
                   <Link2 size={24} />
                </div>
-              <h3 className="font-black text-lg mb-2 flex items-center gap-2">Sincronização Cloud</h3>
-              <p className="text-xs text-slate-400 mb-6 font-bold uppercase">Conecte sua TV e seu Celular em qualquer lugar</p>
+              <h3 className="font-black text-lg mb-2 flex items-center gap-2">Sincronização Cloud (WiFi)</h3>
+              <p className="text-xs text-slate-400 mb-6 font-bold uppercase">Pareie sua TV e Celular instantaneamente</p>
               
-              <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center text-center gap-4">
-                <div className="bg-white px-8 py-4 rounded-2xl border border-slate-200 shadow-sm">
-                  <span className="text-[10px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Código de Pareamento</span>
-                  <span className="text-4xl font-black text-slate-900 tracking-tighter">{syncCode}</span>
+              <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-6 flex flex-col items-center text-center gap-6">
+                <div className="flex flex-col md:flex-row items-center gap-8 w-full justify-center">
+                  <div className="bg-white p-4 rounded-3xl shadow-xl border border-slate-100">
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(controllerUrl)}`} 
+                      alt="QR Code de Pareamento"
+                      className="w-40 h-40"
+                    />
+                    <p className="text-[9px] font-black text-slate-400 uppercase mt-2 tracking-widest">Escaneie para Conectar</p>
+                  </div>
+                  
+                  <div className="flex flex-col items-center">
+                    <div className="bg-white px-8 py-4 rounded-2xl border border-slate-200 shadow-sm mb-4">
+                      <span className="text-[10px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Código Manual</span>
+                      <span className="text-4xl font-black text-slate-900 tracking-tighter">{syncCode}</span>
+                    </div>
+                    <button onClick={generateNewSyncCode} className="flex items-center gap-2 text-[10px] font-black text-red-600 uppercase hover:bg-red-50 px-4 py-2 rounded-xl transition-all">
+                      <RefreshCcw size={14} /> Gerar Novo Código
+                    </button>
+                  </div>
                 </div>
-                <p className="text-[10px] text-slate-500 font-bold leading-relaxed max-w-[250px] uppercase">
-                  Abra este app no seu celular e use este código nas configurações para controlar sua TV remotamente.
-                </p>
-                <button onClick={generateNewSyncCode} className="flex items-center gap-2 text-[10px] font-black text-red-600 uppercase hover:bg-red-50 px-4 py-2 rounded-xl transition-all">
-                  <RefreshCcw size={14} /> Gerar Novo Código
-                </button>
+
+                <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-start gap-3 text-left">
+                  <QrCode className="text-blue-600 mt-1 flex-shrink-0" size={20} />
+                  <p className="text-[10px] text-blue-700 font-bold leading-relaxed uppercase">
+                    Aponte a câmera do seu celular para o QR Code acima. O controle remoto abrirá automaticamente já conectado ao WiFi desta TV.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -588,44 +642,4 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
           <div className="bg-white w-full max-w-lg rounded-[2.5rem] flex flex-col p-6 shadow-2xl animate-in zoom-in-95 duration-300">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
-                <Star className="text-yellow-500 fill-yellow-500" />
-                <h3 className="text-xl font-black text-slate-800 uppercase italic">Multi-Flash do Dia</h3>
-              </div>
-              <button onClick={() => setShowMultiSelect(false)} className="p-2 bg-slate-100 rounded-full text-slate-400 hover:text-red-600 transition-colors"><X size={24} /></button>
-            </div>
-            
-            <p className="text-[10px] font-bold text-slate-400 uppercase mb-4 px-2">Selecione os produtos que entrarão no rodízio de destaque especial</p>
-
-            <div className="flex-grow overflow-y-auto space-y-3 max-h-[60vh] pr-2">
-              {state.products.map(p => {
-                const isSelected = state.superOffer.productIds.includes(p.id);
-                return (
-                  <div key={p.id} className={`p-4 rounded-2xl border transition-all ${isSelected ? 'bg-yellow-50 border-yellow-400 shadow-sm' : 'bg-slate-50 border-slate-100'}`}>
-                    <div className="flex justify-between items-center mb-3">
-                      <p className={`font-bold text-sm uppercase ${isSelected ? 'text-yellow-700' : 'text-slate-700'}`}>{p.name}</p>
-                      {isSelected && <CheckCircle2 size={18} className="text-yellow-500" />}
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[10, 20, 30].map(pct => (
-                        <button 
-                          key={pct}
-                          onClick={() => toggleSuperOfferProduct(p, pct)}
-                          className={`py-2 rounded-xl font-black text-[9px] uppercase transition-all ${isSelected ? 'bg-yellow-400 text-black shadow-sm' : 'bg-white text-slate-400 border border-slate-200 hover:border-yellow-200'}`}
-                        >
-                          -{pct}% OFF
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <button onClick={() => setShowMultiSelect(false)} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-sm mt-6 shadow-xl active:scale-95 transition-all">Confirmar Seleção</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default AdminPanel;
+                <Star className="text-yellow-500 fill-
