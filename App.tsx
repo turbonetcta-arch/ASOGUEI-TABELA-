@@ -5,11 +5,17 @@ import { INITIAL_PRODUCTS, INITIAL_PROMOTIONS } from './constants';
 import AdminPanel from './components/AdminPanel';
 import TvView from './components/TvView';
 import RemoteController from './components/RemoteController';
-import { Home } from 'lucide-react';
+import { Home, Wifi, WifiOff } from 'lucide-react';
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<AppMode>('ADMIN');
-  const syncChannel = useRef<BroadcastChannel | null>(null);
+  const [syncCode, setSyncCode] = useState<string>(() => {
+    return localStorage.getItem('acougue_sync_code') || Math.random().toString(36).substring(2, 8).toUpperCase();
+  });
+  const [isOnline, setIsOnline] = useState(false);
+  
+  const socketRef = useRef<WebSocket | null>(null);
+  const isInternalChange = useRef(false);
 
   const [state, setState] = useState<AppState>(() => {
     try {
@@ -21,7 +27,7 @@ const App: React.FC = () => {
     return {
       products: INITIAL_PRODUCTS,
       promotions: INITIAL_PROMOTIONS,
-      superOffer: { productId: '', discountPrice: 0, isActive: false },
+      superOffer: { productIds: [], discountPrices: {}, isActive: false },
       storeName: 'SEU AÇOUGUE PREFERIDO',
       accentColor: '#B91C1C',
       promoInterval: 10000,
@@ -30,20 +36,60 @@ const App: React.FC = () => {
     };
   });
 
+  // Salva o código de sincronização
   useEffect(() => {
-    syncChannel.current = new BroadcastChannel('acougue_tv_sync');
-    syncChannel.current.onmessage = (event) => {
-      if (event.data.type === 'UPDATE_STATE') {
-        setState(event.data.payload);
-      }
-    };
-    return () => syncChannel.current?.close();
-  }, []);
+    localStorage.setItem('acougue_sync_code', syncCode);
+  }, [syncCode]);
 
+  // Lógica de Sincronização Remota (WebSockets)
+  useEffect(() => {
+    // Usando um servidor de relay público para demonstração/teste
+    const connect = () => {
+      const ws = new WebSocket('wss://socketsbay.com/wss/v2/1/demo/');
+      
+      ws.onopen = () => {
+        setIsOnline(true);
+        console.log('Conectado à Nuvem de Sincronização');
+        // Ao conectar, solicita o estado mais recente ou envia o seu
+        ws.send(JSON.stringify({ type: 'JOIN', room: syncCode }));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          // Só processa mensagens destinadas à nossa sala (room)
+          if (data.room === syncCode && data.type === 'UPDATE_STATE') {
+            isInternalChange.current = true;
+            setState(data.payload);
+            setTimeout(() => { isInternalChange.current = false; }, 100);
+          }
+        } catch (e) {}
+      };
+
+      ws.onclose = () => {
+        setIsOnline(false);
+        setTimeout(connect, 3000); // Tenta reconectar
+      };
+
+      socketRef.current = ws;
+    };
+
+    connect();
+    return () => socketRef.current?.close();
+  }, [syncCode]);
+
+  // Envia atualizações para a nuvem quando o estado muda localmente
   useEffect(() => {
     localStorage.setItem('acougue_state', JSON.stringify(state));
-    syncChannel.current?.postMessage({ type: 'UPDATE_STATE', payload: state });
-  }, [state]);
+    
+    if (!isInternalChange.current && socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        type: 'UPDATE_STATE',
+        room: syncCode,
+        payload: state
+      }));
+    }
+  }, [state, syncCode]);
 
   useEffect(() => {
     let wakeLock: any = null;
@@ -59,6 +105,16 @@ const App: React.FC = () => {
 
   return (
     <div className={`relative min-h-screen bg-black transition-colors duration-500 overflow-x-hidden ${state.tvOrientation === 90 && mode === 'TV' ? 'overflow-hidden' : ''}`}>
+      
+      {/* Indicador de Status da Conexão Nuvem */}
+      <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 px-3 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/10 pointer-events-none">
+        {isOnline ? (
+          <><Wifi size={12} className="text-emerald-500" /> <span className="text-[8px] font-black text-emerald-500 uppercase">Cloud Online: {syncCode}</span></>
+        ) : (
+          <><WifiOff size={12} className="text-red-500" /> <span className="text-[8px] font-black text-red-500 uppercase">Reconectando Cloud...</span></>
+        )}
+      </div>
+
       {mode === 'ADMIN' && (
         <AdminPanel 
           state={state} 
@@ -91,7 +147,7 @@ const App: React.FC = () => {
 
       <div className={`fixed bottom-0 left-0 right-0 flex justify-center pb-1 pointer-events-none z-[9999] transition-opacity duration-1000 ${mode === 'TV' ? 'opacity-30' : 'opacity-60'}`}>
         <span className={`text-[10px] font-black uppercase tracking-[0.4em] ${mode === 'ADMIN' ? 'text-slate-400' : 'text-white/30'}`}>
-          Desenvolvido por Fabio FCell
+          Sincronização Cloud Ativa via Fabio FCell
         </span>
       </div>
     </div>

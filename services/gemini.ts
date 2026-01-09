@@ -28,7 +28,11 @@ export const geminiService = {
     }
   },
 
-  async generateProductImage(prompt: string, highQuality: boolean = false): Promise<string | null> {
+  async generateProductImage(
+    prompt: string, 
+    highQuality: boolean = false, 
+    aspectRatio: "1:1" | "16:9" | "4:3" | "3:4" | "9:16" = "1:1"
+  ): Promise<string | null> {
     const apiKey = await ensureApiKey();
     if (!apiKey) return null;
 
@@ -38,14 +42,12 @@ export const geminiService = {
         ? `Professional commercial food photography of ${prompt}. Fresh meat, high quality, dark slate background, cinematic lighting, appetizing, 4k, macro shot.`
         : prompt;
 
-      // Configuração básica suportada por todos os modelos de imagem
       const config: any = {
         imageConfig: {
-          aspectRatio: "1:1"
+          aspectRatio: aspectRatio
         }
       };
 
-      // imageSize só é suportado pelo gemini-3-pro-image-preview
       if (modelName === 'gemini-3-pro-image-preview') {
         config.imageConfig.imageSize = "1K";
       }
@@ -60,7 +62,6 @@ export const geminiService = {
     };
 
     try {
-      // Tenta o modelo solicitado (Pro ou Flash)
       const targetModel = highQuality ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
       let response = await tryGenerate(targetModel);
 
@@ -72,10 +73,7 @@ export const geminiService = {
     } catch (error: any) {
       console.error("Gemini Image Error:", error);
 
-      // Se for erro de permissão (403), modelo não encontrado (404) ou erro de argumento (400)
       if (error.message?.includes("403") || error.message?.includes("404") || error.message?.includes("400")) {
-        
-        // Se tentou o Pro e deu erro, tenta o Flash como fallback
         if (highQuality) {
           try {
             console.log("Tentando fallback para gemini-2.5-flash-image...");
@@ -89,9 +87,8 @@ export const geminiService = {
           }
         }
 
-        // Se for erro de permissão persistente, solicita nova chave
         if (error.message?.includes("403") && window.aistudio) {
-          alert("Sua chave de API não tem permissão para gerar imagens (erro 403). Certifique-se de selecionar uma chave de um projeto com faturamento (Billing) ativo.");
+          alert("Sua chave de API não tem permissão para gerar imagens. Certifique-se de usar uma chave com faturamento ativo.");
           await window.aistudio.openSelectKey();
         }
       }

@@ -17,8 +17,8 @@ export interface Promotion {
 }
 
 export interface SuperOffer {
-  productId: string;
-  discountPrice: number;
+  productIds: string[]; // Agora suporta múltiplos IDs
+  discountPrices: Record<string, number>; // Mapeia ID do produto para seu preço de oferta
   isActive: boolean;
 }
 
@@ -32,5 +32,5 @@ export interface AppState {
   accentColor: string;
   promoInterval: number;
   productPageInterval: number;
-  tvOrientation: 0 | 90; // 0 para Horizontal, 90 para Vertical
+  tvOrientation: 0 | 90;
 }
