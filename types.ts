@@ -27,7 +27,7 @@ export interface AppState {
   products: Product[];
   promotions: Promotion[];
   superOffer: SuperOffer;
-  view: 'ADMIN' | 'TV';
+  view: 'LANDING' | 'ADMIN' | 'TV' | 'CONTROLLER';
   tvOrientation: 0 | 90;
   promoInterval: number;
 }

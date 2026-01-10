@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AppState, Promotion } from '../types';
-import { Clock, Star, Flame, Tag, Zap, TrendingDown } from 'lucide-react';
+import { AppState, Promotion, Product } from '../types';
+import { Clock, Star, Flame, Tag, Zap, TrendingDown, ArrowLeft, ClipboardList } from 'lucide-react';
 
 interface TvViewProps {
   state: AppState;
@@ -9,7 +9,7 @@ interface TvViewProps {
   highlightedPromoId?: string | null;
 }
 
-const TvView: React.FC<TvViewProps> = ({ state, highlightedPromoId }) => {
+const TvView: React.FC<TvViewProps> = ({ state, setState, highlightedPromoId }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
   const [currentSuperIndex, setCurrentSuperIndex] = useState(0);
@@ -19,6 +19,20 @@ const TvView: React.FC<TvViewProps> = ({ state, highlightedPromoId }) => {
   const productContainerRef = useRef<HTMLDivElement>(null);
 
   const activePromos = useMemo(() => state.promotions.filter(p => p.isActive), [state.promotions]);
+  const hasPromos = activePromos.length > 0;
+
+  // Se não houver promos, usamos a lista de produtos como "itens de cardápio" para o carrossel
+  const menuItems = useMemo(() => {
+    if (hasPromos) return activePromos;
+    return state.products.map(p => ({
+      id: `menu-${p.id}`,
+      productId: p.id,
+      offerPrice: p.price,
+      imageUrl: 'https://images.unsplash.com/photo-1551028150-64b9f398f678?auto=format&fit=crop&q=80&w=800', // Imagem padrão de carne premium
+      description: 'QUALIDADE E PROCEDÊNCIA GARANTIDA',
+      isActive: true
+    })) as Promotion[];
+  }, [hasPromos, activePromos, state.products]);
   
   const activeSuperOffers = useMemo(() => {
     return state.superOffer.productIds.map(id => {
@@ -39,21 +53,21 @@ const TvView: React.FC<TvViewProps> = ({ state, highlightedPromoId }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // Promo Carousel Logic
+  // Carousel Logic (Promos ou Cardápio)
   useEffect(() => {
-    if (activePromos.length <= 1 || highlightedPromo) return;
+    if (menuItems.length <= 1 || highlightedPromo) return;
     const interval = setInterval(() => {
-      setCurrentPromoIndex(prev => (prev + 1) % activePromos.length);
+      setCurrentPromoIndex(prev => (prev + 1) % menuItems.length);
     }, state.promoInterval || 6000);
     return () => clearInterval(interval);
-  }, [activePromos.length, state.promoInterval, highlightedPromo]);
+  }, [menuItems.length, state.promoInterval, highlightedPromo]);
 
   // Super Offer Carousel Logic
   useEffect(() => {
     if (!state.superOffer.isActive || activeSuperOffers.length <= 1 || highlightedPromo) return;
     const interval = setInterval(() => {
       setCurrentSuperIndex(prev => (prev + 1) % activeSuperOffers.length);
-    }, 15000); // Super offers stay longer
+    }, 15000);
     return () => clearInterval(interval);
   }, [state.superOffer.isActive, activeSuperOffers.length, highlightedPromo]);
 
@@ -76,11 +90,11 @@ const TvView: React.FC<TvViewProps> = ({ state, highlightedPromoId }) => {
           position += 0.6 * direction;
           if (position >= contentHeight - containerHeight + 40) {
             direction = -1;
-            pauseCounter = 300; // Pause at bottom
+            pauseCounter = 300; 
           } else if (position <= 0) {
             direction = 1;
             position = 0;
-            pauseCounter = 300; // Pause at top
+            pauseCounter = 300; 
           }
           setProductScrollY(position);
         }
@@ -98,6 +112,12 @@ const TvView: React.FC<TvViewProps> = ({ state, highlightedPromoId }) => {
     return { integer: parts[0], decimal: parts[1] };
   };
 
+  const handleBack = () => {
+    if (setState) {
+      setState(prev => ({ ...prev, view: 'ADMIN' }));
+    }
+  };
+
   const rotationStyles: React.CSSProperties = state.tvOrientation === 90 ? {
     transform: 'rotate(90deg)', transformOrigin: 'center',
     width: '100vh', height: '100vw',
@@ -108,6 +128,14 @@ const TvView: React.FC<TvViewProps> = ({ state, highlightedPromoId }) => {
   return (
     <div className="fixed inset-0 bg-[#050505] overflow-hidden flex items-center justify-center font-inter">
       
+      <button 
+        onClick={handleBack}
+        className="fixed top-4 left-4 z-[300] opacity-0 hover:opacity-100 transition-opacity duration-300 bg-white/10 hover:bg-white/20 backdrop-blur-xl p-4 rounded-2xl border border-white/10 text-white shadow-2xl flex items-center gap-2 group"
+      >
+        <ArrowLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
+        <span className="font-black text-[10px] uppercase tracking-widest">Sair do Modo TV</span>
+      </button>
+
       {/* REMOTE TRIGGERED HIGHLIGHT OVERLAY */}
       {highlightedPromo && (
         <div className="fixed inset-0 z-[200] bg-red-900 flex flex-col animate-in fade-in zoom-in duration-500">
@@ -203,7 +231,7 @@ const TvView: React.FC<TvViewProps> = ({ state, highlightedPromoId }) => {
           </div>
         )}
 
-        {/* MAIN TV CONTENT: LEFT (PRICES), RIGHT (PROMOS) */}
+        {/* MAIN TV CONTENT: LEFT (PRICES), RIGHT (PROMOS/MENU) */}
         <div className="w-[58%] h-full flex flex-col bg-gradient-to-b from-[#121212] to-[#050505] border-r-[1vh] border-yellow-600/20 relative overflow-hidden">
           <header className="h-[16vh] flex items-center justify-between px-[4vw] bg-black/80 border-b-4 border-yellow-600 z-20">
             <div className="flex flex-col">
@@ -236,65 +264,66 @@ const TvView: React.FC<TvViewProps> = ({ state, highlightedPromoId }) => {
           </div>
           
           <footer className="h-[8vh] bg-yellow-600 flex items-center justify-center relative z-20 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-            <span className="text-[3.5vh] font-black text-black uppercase tracking-[0.4em] italic">Preços imbatíveis todos os dias!</span>
+            <span className="text-[3.5vh] font-black text-black uppercase tracking-[0.4em] italic">Qualidade imbatível no seu dia a dia!</span>
           </footer>
         </div>
 
-        <div className="w-[42%] h-full relative bg-yellow-500 flex flex-col overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 bg-red-700 py-[3vh] shadow-2xl z-20 transform -skew-y-3 -mt-[1vh]">
-            <h2 className="text-[6vh] font-oswald font-black text-white text-center uppercase tracking-tighter italic transform skew-y-3">OFERTA ESPECIAL</h2>
+        <div className={`w-[42%] h-full relative flex flex-col overflow-hidden transition-colors duration-1000 ${hasPromos ? 'bg-yellow-500' : 'bg-slate-800'}`}>
+          <div className={`absolute top-0 left-0 right-0 py-[3vh] shadow-2xl z-20 transform -skew-y-3 -mt-[1vh] transition-colors duration-1000 ${hasPromos ? 'bg-red-700' : 'bg-slate-900 border-b-4 border-indigo-500'}`}>
+            <h2 className="text-[6vh] font-oswald font-black text-white text-center uppercase tracking-tighter italic transform skew-y-3 flex items-center justify-center gap-4">
+              {hasPromos ? (
+                <>OFERTA ESPECIAL <Zap size="5vh" className="fill-white" /></>
+              ) : (
+                <>NOSSO CARDÁPIO <ClipboardList size="5vh" /></>
+              )}
+            </h2>
           </div>
           
           <div className="flex-grow relative flex flex-col pt-[12vh]">
-            {activePromos.length > 0 ? (
-              activePromos.map((promo, idx) => {
-                const product = state.products.find(p => p.id === promo.productId);
+            {menuItems.length > 0 ? (
+              menuItems.map((item, idx) => {
+                const product = state.products.find(p => p.id === item.productId);
                 const isActive = idx === currentPromoIndex;
-                const { integer, decimal } = formatPrice(promo.offerPrice);
+                const { integer, decimal } = formatPrice(item.offerPrice);
                 
                 return (
                   <div 
-                    key={promo.id} 
+                    key={item.id} 
                     className={`absolute inset-0 flex flex-col items-center p-[3vw] pt-[5vh] transition-all duration-1000 cubic-bezier(0.4, 0, 0.2, 1) ${isActive ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'}`}
                   >
                     <div className="w-full h-[40vh] mb-[3vh] transform hover:scale-[1.03] transition-transform duration-700">
-                      <div className="w-full h-full bg-white rounded-[4vh] overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.3)] border-[1.2vh] border-white relative">
-                        <img src={promo.imageUrl} className="w-full h-full object-cover" alt={product?.name} />
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-red-900/80 to-transparent p-6">
+                      <div className={`w-full h-full bg-white rounded-[4vh] overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.3)] border-[1.2vh] border-white relative`}>
+                        <img src={item.imageUrl} className="w-full h-full object-cover" alt={product?.name} />
+                        <div className={`absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent`}>
                            <h3 className="text-[6.5vh] font-oswald font-black text-white uppercase leading-none tracking-tight">{product?.name}</h3>
                         </div>
                       </div>
                     </div>
 
                     <div className="text-center w-full mb-[3vh]">
-                      <div className="bg-red-900/10 border border-red-900/20 text-red-900 px-6 py-4 rounded-3xl inline-block max-w-full shadow-sm">
-                        <p className="text-[3.2vh] font-black italic leading-tight">"{promo.description}"</p>
+                      <div className={`px-6 py-4 rounded-3xl inline-block max-w-full shadow-sm border ${hasPromos ? 'bg-red-900/10 border-red-900/20 text-red-900' : 'bg-white/10 border-white/10 text-white'}`}>
+                        <p className="text-[3.2vh] font-black italic leading-tight">"{item.description}"</p>
                       </div>
                     </div>
 
-                    <div className="mt-auto mb-[2vh] w-full flex items-center justify-center bg-red-700 text-white py-[4vh] rounded-[4vh] shadow-2xl border-b-[1.5vh] border-red-900 transform transition-transform active:scale-95">
+                    <div className={`mt-auto mb-[2vh] w-full flex items-center justify-center py-[4vh] rounded-[4vh] shadow-2xl border-b-[1.5vh] transform transition-transform active:scale-95 ${hasPromos ? 'bg-red-700 border-red-900 text-white' : 'bg-slate-100 border-slate-300 text-slate-900'}`}>
                       <div className="flex items-start">
-                        <span className="text-[5vh] font-black mt-4 mr-3 opacity-80">R$</span>
+                        <span className={`text-[5vh] font-black mt-4 mr-3 opacity-80 ${hasPromos ? '' : 'text-slate-500'}`}>R$</span>
                         <span className="text-[18vh] font-oswald font-black leading-none tracking-tighter">{integer}</span>
                         <div className="flex flex-col">
                           <span className="text-[9vh] font-oswald font-black leading-none">,{decimal}</span>
-                          <span className="text-[3vh] font-black uppercase text-yellow-400 mt-2 bg-black/20 px-3 py-1 rounded-lg">por {product?.unit}</span>
+                          <span className={`text-[3vh] font-black uppercase mt-2 px-3 py-1 rounded-lg ${hasPromos ? 'bg-black/20 text-yellow-400' : 'bg-slate-900/10 text-slate-600'}`}>por {product?.unit}</span>
                         </div>
                       </div>
                     </div>
                   </div>
                 );
               })
-            ) : (
-              <div className="flex-grow flex flex-col items-center justify-center text-red-900/20 p-12 text-center">
-                <Tag size="15vh" className="mb-8 opacity-20" />
-                <p className="text-[4vh] font-black uppercase italic tracking-widest">Confira nossas ofertas exclusivas no balcão!</p>
-              </div>
-            )}
+            ) : null}
           </div>
 
-          <footer className="h-[6vh] bg-black/10 flex items-center justify-center border-t border-black/5">
-            <span className="text-[1.8vh] font-black text-red-900/60 uppercase tracking-[0.5em] italic">Qualidade Garantida por Fabio FCell</span>
+          <footer className={`h-[6vh] flex items-center justify-center border-t transition-colors duration-1000 ${hasPromos ? 'bg-black/10 border-black/5' : 'bg-black/30 border-white/5'}`}>
+            <span className={`text-[1.8vh] font-black uppercase tracking-[0.5em] italic ${hasPromos ? 'text-red-900/60' : 'text-white/40'}`}>Qualidade Garantida por Fabio FCell</span>
           </footer>
         </div>
       </div>
