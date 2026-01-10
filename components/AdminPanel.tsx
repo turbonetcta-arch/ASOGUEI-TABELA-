@@ -29,6 +29,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
   const [aiThinking, setAiThinking] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const [qrUrl, setQrUrl] = useState<string>('');
+  const [hasAutoStartedPromoAi, setHasAutoStartedPromoAi] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTargetId, setUploadTargetId] = useState<string | null>(null);
@@ -96,6 +97,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, setState, onEnterTvMode,
       });
     }
   };
+
+  // EFEITO: Gera automaticamente a foto para a primeira oferta ao entrar na aba PROMOS
+  useEffect(() => {
+    if (activeTab === 'PROMOS' && !hasAutoStartedPromoAi && state.promotions.length > 0 && hasGoogleKey) {
+      const firstPromo = state.promotions[0];
+      const product = state.products.find(p => p.id === firstPromo.productId);
+      if (product) {
+        handleAiAction(firstPromo.id, 'IMG', product.name);
+        setHasAutoStartedPromoAi(true);
+      }
+    }
+  }, [activeTab, state.promotions, state.products, hasAutoStartedPromoAi, hasGoogleKey]);
 
   const toggleProductSelection = (id: string) => {
     setSelectedProductIds(prev => {

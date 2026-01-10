@@ -114,7 +114,8 @@ const TvView: React.FC<TvViewProps> = ({ state, setState, highlightedPromoId }) 
 
   const handleBack = () => {
     if (setState) {
-      setState(prev => ({ ...prev, view: 'ADMIN' }));
+      // Alterado de 'ADMIN' para 'LANDING' conforme solicitado
+      setState(prev => ({ ...prev, view: 'LANDING' }));
     }
   };
 
