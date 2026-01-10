@@ -2,60 +2,44 @@
 import { GoogleGenAI } from "@google/genai";
 
 export const geminiService = {
-  // Faz uma pergunta genérica para a IA
-  async ask(prompt: string): Promise<string> {
-    try {
-      // Create a new instance right before use with process.env.API_KEY
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: [{ parts: [{ text: prompt }] }],
-      });
-      return response.text || "Sem resposta.";
-    } catch (e) {
-      console.error("Erro na IA:", e);
-      return "Erro na IA.";
-    }
-  },
-
-  // Gera uma frase de marketing curta e impactante para o produto
+  // Generate a catchy marketing phrase for a product
   async generateCatchyDescription(productName: string): Promise<string> {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: [{ parts: [{ text: `Crie uma frase de marketing muito curta (máx 45 caracteres) para vender ${productName} em um açougue. Retorne apenas o texto da frase em letras maiúsculas, sem aspas.` }] }],
+        contents: [{ parts: [{ text: `Crie uma frase de marketing muito curta e impactante (máx 40 caracteres) para vender ${productName} em um açougue premium. Retorne apenas o texto da frase em LETRAS MAIÚSCULAS, sem aspas.` }] }],
       });
-      return response.text?.trim().toUpperCase() || "QUALIDADE GARANTIDA!";
+      return response.text?.trim().toUpperCase() || "QUALIDADE GARANTIDA E PREÇO JUSTO!";
     } catch (e) {
-      console.error("Erro na descrição IA:", e);
-      return "QUALIDADE E PREÇO BAIXO!";
+      console.error("Gemini Text Error:", e);
+      return "QUALIDADE E SABOR NO SEU CHURRASCO!";
     }
   },
 
-  // Gera uma imagem profissional do produto usando os modelos de imagem do Gemini
-  async generateProductImage(productName: string, highQuality: boolean = false, aspectRatio: string = "1:1"): Promise<string | null> {
+  // Generate a professional product image using Gemini models
+  async generateProductImage(productName: string, highQuality: boolean = false, aspectRatio: "1:1" | "16:9" | "4:3" = "16:9"): Promise<string | null> {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      // Seleciona o modelo baseado na qualidade desejada
+      // Use pro image model if requested, else flash image
       const model = highQuality ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
       
       const response = await ai.models.generateContent({
         model: model,
         contents: {
-          parts: [{ text: `High quality professional commercial photography of fresh ${productName} raw meat, appetizing, studio lighting, butcher shop background.` }]
+          parts: [{ text: `High-end commercial studio photography of fresh, raw ${productName} meat. Beautiful marbling, appetizing, dark professional background, dramatic studio lighting, 8k resolution, butcher shop presentation.` }]
         },
         config: {
           imageConfig: {
-            aspectRatio: aspectRatio as any,
+            aspectRatio: aspectRatio,
           }
         }
       });
 
-      // Itera pelas partes para encontrar os dados da imagem (inlineData)
-      const candidates = response.candidates;
-      if (candidates && candidates.length > 0) {
-        for (const part of candidates[0].content.parts) {
+      // Extract image from response parts
+      const candidate = response.candidates?.[0];
+      if (candidate) {
+        for (const part of candidate.content.parts) {
           if (part.inlineData) {
             return `data:image/png;base64,${part.inlineData.data}`;
           }
@@ -63,7 +47,7 @@ export const geminiService = {
       }
       return null;
     } catch (e) {
-      console.error("Erro na geração de imagem Gemini:", e);
+      console.error("Gemini Image Error:", e);
       return null;
     }
   }

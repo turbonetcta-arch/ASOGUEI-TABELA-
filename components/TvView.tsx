@@ -1,16 +1,15 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppState, Promotion } from '../types';
-import { Clock, Star, Flame, RotateCcw, RotateCw, Tag, Server, Zap } from 'lucide-react';
+import { Clock, Star, Flame, Tag, Zap, TrendingDown } from 'lucide-react';
 
 interface TvViewProps {
   state: AppState;
   setState?: React.Dispatch<React.SetStateAction<AppState>>;
-  remoteIp?: string;
   highlightedPromoId?: string | null;
 }
 
-const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp, highlightedPromoId }) => {
+const TvView: React.FC<TvViewProps> = ({ state, highlightedPromoId }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
   const [currentSuperIndex, setCurrentSuperIndex] = useState(0);
@@ -34,50 +33,60 @@ const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp, highlightedP
     return state.promotions.find(p => p.id === highlightedPromoId);
   }, [highlightedPromoId, state.promotions]);
 
+  // Update Clock
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
+  // Promo Carousel Logic
   useEffect(() => {
     if (activePromos.length <= 1 || highlightedPromo) return;
     const interval = setInterval(() => {
       setCurrentPromoIndex(prev => (prev + 1) % activePromos.length);
-    }, state.promoInterval);
+    }, state.promoInterval || 6000);
     return () => clearInterval(interval);
   }, [activePromos.length, state.promoInterval, highlightedPromo]);
 
+  // Super Offer Carousel Logic
   useEffect(() => {
     if (!state.superOffer.isActive || activeSuperOffers.length <= 1 || highlightedPromo) return;
     const interval = setInterval(() => {
       setCurrentSuperIndex(prev => (prev + 1) % activeSuperOffers.length);
-    }, state.promoInterval * 0.8);
+    }, 15000); // Super offers stay longer
     return () => clearInterval(interval);
-  }, [state.superOffer.isActive, activeSuperOffers.length, state.promoInterval, highlightedPromo]);
+  }, [state.superOffer.isActive, activeSuperOffers.length, highlightedPromo]);
 
+  // Infinite Scroll Logic for Products
   useEffect(() => {
     let animationFrame: number;
     let position = 0;
     let direction = 1;
     let pauseCounter = 0;
+    
     const scroll = () => {
       if (!productListRef.current || !productContainerRef.current) return;
       const contentHeight = productListRef.current.scrollHeight;
       const containerHeight = productContainerRef.current.offsetHeight;
+      
       if (contentHeight > containerHeight) {
-        if (pauseCounter > 0) { pauseCounter--; } else {
-          position += 0.5 * direction;
-          if (position >= contentHeight - containerHeight + 20) {
+        if (pauseCounter > 0) { 
+          pauseCounter--; 
+        } else {
+          position += 0.6 * direction;
+          if (position >= contentHeight - containerHeight + 40) {
             direction = -1;
-            pauseCounter = 200;
+            pauseCounter = 300; // Pause at bottom
           } else if (position <= 0) {
             direction = 1;
             position = 0;
-            pauseCounter = 200;
+            pauseCounter = 300; // Pause at top
           }
           setProductScrollY(position);
         }
-      } else { setProductScrollY(0); }
+      } else { 
+        setProductScrollY(0); 
+      }
       animationFrame = requestAnimationFrame(scroll);
     };
     animationFrame = requestAnimationFrame(scroll);
@@ -89,10 +98,6 @@ const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp, highlightedP
     return { integer: parts[0], decimal: parts[1] };
   };
 
-  const handleRotate = (deg: 0 | 90) => {
-    if (setState) setState(prev => ({ ...prev, tvOrientation: deg }));
-  };
-
   const rotationStyles: React.CSSProperties = state.tvOrientation === 90 ? {
     transform: 'rotate(90deg)', transformOrigin: 'center',
     width: '100vh', height: '100vw',
@@ -101,36 +106,43 @@ const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp, highlightedP
   } : { width: '100vw', height: '100vh' };
 
   return (
-    <div className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center">
+    <div className="fixed inset-0 bg-[#050505] overflow-hidden flex items-center justify-center font-inter">
       
-      {/* OVERLAY DE DESTAQUE (COMANDO REMOTO) */}
+      {/* REMOTE TRIGGERED HIGHLIGHT OVERLAY */}
       {highlightedPromo && (
-        <div className="fixed inset-0 z-[200] bg-red-700 flex flex-col animate-in fade-in zoom-in duration-500">
-           <div className="absolute top-0 left-0 right-0 h-[15vh] bg-black flex items-center justify-center border-b-8 border-red-800">
-              <div className="flex items-center gap-10 animate-pulse">
-                <Zap className="text-yellow-400" size="8vh" />
-                <h2 className="text-[10vh] font-oswald font-black text-white italic tracking-tighter uppercase">OFERTA AGORA!</h2>
-                <Zap className="text-yellow-400" size="8vh" />
+        <div className="fixed inset-0 z-[200] bg-red-900 flex flex-col animate-in fade-in zoom-in duration-500">
+           <div className="absolute top-0 left-0 right-0 h-[12vh] bg-black flex items-center justify-center border-b-8 border-yellow-500 shadow-2xl">
+              <div className="flex items-center gap-12 animate-pulse">
+                <Zap className="text-yellow-400 fill-yellow-400" size="6vh" />
+                <h2 className="text-[8vh] font-oswald font-black text-white italic tracking-tighter uppercase">SUPER OFERTA AGORA!</h2>
+                <Zap className="text-yellow-400 fill-yellow-400" size="6vh" />
               </div>
            </div>
            
-           <div className="flex-grow flex flex-col items-center justify-center p-[5vh] mt-[10vh]">
-              <div className="w-[80%] max-w-[1200px] aspect-video bg-white rounded-[5vh] shadow-[0_40px_100px_rgba(0,0,0,0.6)] overflow-hidden border-[2vh] border-white relative">
+           <div className="flex-grow flex flex-col items-center justify-center p-[5vh] mt-[5vh]">
+              <div className="w-[85%] max-w-[1400px] aspect-video bg-white rounded-[4vh] shadow-[0_50px_100px_rgba(0,0,0,0.8)] overflow-hidden border-[1.5vh] border-white relative group">
                  <img src={highlightedPromo.imageUrl} className="w-full h-full object-cover" alt="Destaque" />
-                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-10">
-                    <h3 className="text-[10vh] font-oswald font-black text-white uppercase italic leading-none">{state.products.find(p => p.id === highlightedPromo.productId)?.name}</h3>
+                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
+                 <div className="absolute bottom-[5%] left-[5%]">
+                    <h3 className="text-[12vh] font-oswald font-black text-white uppercase italic leading-none drop-shadow-2xl">
+                      {state.products.find(p => p.id === highlightedPromo.productId)?.name}
+                    </h3>
                  </div>
               </div>
               
-              <div className="mt-[5vh] bg-yellow-400 px-[8vw] py-[4vh] rounded-[4vh] border-b-[1.5vh] border-yellow-600 shadow-2xl flex items-center gap-[5vw]">
+              <div className="mt-[4vh] bg-yellow-500 px-[6vw] py-[3vh] rounded-[3vh] border-b-[1.2vh] border-yellow-700 shadow-2xl flex items-center gap-[4vw] transform -rotate-1">
                   <div className="text-center">
-                    <p className="text-[4vh] font-black text-red-900 uppercase italic">Aproveite:</p>
-                    <p className="text-[18vh] font-oswald font-black text-red-700 leading-none tracking-tighter">
-                      R$ {highlightedPromo.offerPrice.toFixed(2).replace('.', ',')}
-                    </p>
+                    <p className="text-[3vh] font-black text-red-900 uppercase italic leading-none mb-2">Preço Especial:</p>
+                    <div className="flex items-start">
+                      <span className="text-[5vh] font-black text-red-800 mt-4 mr-2">R$</span>
+                      <span className="text-[20vh] font-oswald font-black text-red-700 leading-none tracking-tighter">
+                        {formatPrice(highlightedPromo.offerPrice).integer}
+                      </span>
+                      <span className="text-[10vh] font-oswald font-black text-red-700 leading-none">,{formatPrice(highlightedPromo.offerPrice).decimal}</span>
+                    </div>
                   </div>
-                  <div className="h-[15vh] w-px bg-red-900/20" />
-                  <p className="text-[5vh] font-black text-red-900 uppercase max-w-[400px] leading-tight italic">
+                  <div className="h-[15vh] w-[2px] bg-red-900/10" />
+                  <p className="text-[4.5vh] font-black text-red-900 uppercase max-w-[500px] leading-tight italic drop-shadow-sm">
                     "{highlightedPromo.description}"
                   </p>
               </div>
@@ -138,57 +150,52 @@ const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp, highlightedP
         </div>
       )}
 
-      {/* Botões de controle de rotação - Invisíveis por padrão */}
-      <div className="fixed top-6 right-6 z-[110] flex gap-2 opacity-0 hover:opacity-100 transition-opacity">
-        <button onClick={() => handleRotate(0)} className={`p-3 rounded-xl border flex items-center gap-2 font-black text-xs uppercase transition-all ${state.tvOrientation === 0 ? 'bg-red-600 border-red-500' : 'bg-black/50 border-white/20 text-white/50'}`}>
-          <RotateCcw size={16} /> Horizontal
-        </button>
-        <button onClick={() => handleRotate(90)} className={`p-3 rounded-xl border flex items-center gap-2 font-black text-xs uppercase transition-all ${state.tvOrientation === 90 ? 'bg-red-600 border-red-500' : 'bg-black/50 border-white/20 text-white/50'}`}>
-          <RotateCw size={16} /> Vertical
-        </button>
-      </div>
-
-      <div style={rotationStyles} className="bg-[#0a0a0a] flex flex-row select-none text-white relative transition-all duration-700">
+      <div style={rotationStyles} className="bg-[#0a0a0a] flex flex-row select-none text-white relative">
         
+        {/* SUPER OFFER INTERVENTION */}
         {state.superOffer.isActive && activeSuperOffers[currentSuperIndex] && !highlightedPromo && (
-          <div className="fixed inset-0 z-[100] bg-yellow-400 flex flex-col animate-in zoom-in duration-500">
-            <div className="absolute top-0 left-0 right-0 h-[20vh] bg-red-600 flex items-center justify-center shadow-2xl overflow-hidden">
-              <div className="flex items-center gap-[5vw] animate-pulse">
-                <Star className="text-yellow-400 fill-yellow-400" size="10vh" />
-                <h2 className="text-[12vh] font-oswald font-black text-white uppercase italic tracking-tighter drop-shadow-2xl">OFERTA DO DIA</h2>
-                <Star className="text-yellow-400 fill-yellow-400" size="10vh" />
+          <div className="fixed inset-0 z-[100] bg-[#8B0000] flex flex-col animate-in slide-in-from-bottom duration-700">
+            <div className="absolute top-0 left-0 right-0 h-[18vh] bg-[#FFD700] flex items-center justify-center shadow-2xl overflow-hidden border-b-[1vh] border-yellow-600">
+              <div className="flex items-center gap-12">
+                <TrendingDown className="text-red-700" size="10vh" />
+                <h2 className="text-[11vh] font-oswald font-black text-red-800 uppercase italic tracking-tighter drop-shadow-lg">BAIXOU O PREÇO!</h2>
+                <Star className="text-red-700 fill-red-700 animate-spin-slow" size="10vh" />
               </div>
             </div>
 
-            <div className="flex-grow flex items-center justify-between px-[10vw] pt-[15vh]">
-              <div className="w-[45%] flex flex-col items-center gap-[4vh]">
-                <div className="w-full aspect-square bg-white rounded-[5vh] shadow-2xl border-[2vh] border-white p-[2vh] transform -rotate-2 overflow-hidden">
-                  <img src={activeSuperOffers[currentSuperIndex].promo?.imageUrl || "https://images.unsplash.com/photo-1544025162-d76694265947?w=800"} className="w-full h-full object-cover" alt="Super Oferta" />
+            <div className="flex-grow flex items-center justify-between px-[8vw] pt-[15vh]">
+              <div className="w-[45%] flex flex-col items-center gap-6">
+                <div className="w-full aspect-square bg-white rounded-[4vh] shadow-2xl border-[1.5vh] border-white transform -rotate-3 overflow-hidden relative">
+                  <img src={activeSuperOffers[currentSuperIndex].promo?.imageUrl} className="w-full h-full object-cover" alt="Super Oferta" />
+                  <div className="absolute top-4 right-4 bg-red-600 text-white p-6 rounded-full font-black text-[3vh] shadow-xl animate-pulse">SÓ HOJE!</div>
                 </div>
-                <div className="bg-red-600 text-white px-8 py-4 rounded-full text-[4vh] font-black uppercase tracking-widest animate-bounce">SÓ ENQUANTO DURAR!</div>
               </div>
-              <div className="w-[50%] flex flex-col items-center text-center">
-                <h3 className="text-[14vh] font-oswald font-black text-red-900 leading-none mb-[2vh] uppercase">{activeSuperOffers[currentSuperIndex].product?.name}</h3>
-                <div className="flex flex-col items-center bg-red-600 text-white px-[5vw] py-[4vh] rounded-[5vh] shadow-2xl border-b-[2vh] border-red-900">
-                  <span className="text-[5vh] font-black italic opacity-80 uppercase leading-none">APROVEITE:</span>
+              <div className="w-[50%] flex flex-col items-end text-right">
+                <h3 className="text-[14vh] font-oswald font-black text-yellow-400 leading-none mb-4 uppercase drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
+                  {activeSuperOffers[currentSuperIndex].product?.name}
+                </h3>
+                <div className="bg-yellow-500 text-red-900 px-[4vw] py-[3vh] rounded-[4vh] shadow-[0_30px_60px_rgba(0,0,0,0.4)] border-b-[1.5vh] border-yellow-700 flex flex-col items-center">
+                  <span className="text-[4vh] font-black italic opacity-80 uppercase leading-none mb-2">APROVEITE O KG:</span>
                   <div className="flex items-start">
-                    <span className="text-[6vh] font-black mt-[4vh] mr-2">R$</span>
-                    <span className="text-[30vh] font-oswald font-black leading-[0.8] tracking-tighter">{formatPrice(activeSuperOffers[currentSuperIndex].discountPrice).integer}</span>
+                    <span className="text-[6vh] font-black mt-6 mr-2">R$</span>
+                    <span className="text-[32vh] font-oswald font-black leading-[0.7] tracking-tighter">
+                      {formatPrice(activeSuperOffers[currentSuperIndex].discountPrice).integer}
+                    </span>
                     <div className="flex flex-col">
-                      <span className="text-[12vh] font-oswald font-black">,{formatPrice(activeSuperOffers[currentSuperIndex].discountPrice).decimal}</span>
-                      <span className="text-[4vh] font-bold uppercase text-yellow-400">por {activeSuperOffers[currentSuperIndex].product?.unit}</span>
+                      <span className="text-[14vh] font-oswald font-black leading-none">,{formatPrice(activeSuperOffers[currentSuperIndex].discountPrice).decimal}</span>
+                      <span className="text-[4vh] font-bold uppercase bg-red-700 text-white px-3 py-1 mt-2 rounded-lg">Corte Premium</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="h-[12vh] bg-black flex items-center justify-center overflow-hidden">
-              <div className="flex gap-20 whitespace-nowrap animate-marquee">
-                {Array(5).fill(null).map((_, i) => (
-                  <div key={i} className="flex items-center gap-4">
-                    <Flame className="text-red-500" size="5vh" />
-                    <span className="text-[5vh] font-black text-yellow-400 uppercase italic">Qualidade Garantida • Preço imbatível! • O melhor corte da região!</span>
+            <div className="h-[10vh] bg-black/60 backdrop-blur-md flex items-center justify-center overflow-hidden border-t border-white/10">
+              <div className="flex gap-24 whitespace-nowrap animate-marquee">
+                {Array(6).fill(null).map((_, i) => (
+                  <div key={i} className="flex items-center gap-8">
+                    <Flame className="text-orange-500" size="4vh" />
+                    <span className="text-[4vh] font-black text-white uppercase italic tracking-widest">QUALIDADE PREMIUM • PROCEDÊNCIA GARANTIDA • O MELHOR PREÇO DA CIDADE</span>
                   </div>
                 ))}
               </div>
@@ -196,75 +203,82 @@ const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp, highlightedP
           </div>
         )}
 
-        <div className="w-[55%] h-full flex flex-col bg-gradient-to-b from-[#1a0505] to-[#0a0000] border-r-[0.5vh] border-[#ffd700]/30 relative overflow-hidden">
-          <header className="h-[15vh] flex items-center justify-between px-[3vw] bg-black/40 border-b border-white/5 z-20">
+        {/* MAIN TV CONTENT: LEFT (PRICES), RIGHT (PROMOS) */}
+        <div className="w-[58%] h-full flex flex-col bg-gradient-to-b from-[#121212] to-[#050505] border-r-[1vh] border-yellow-600/20 relative overflow-hidden">
+          <header className="h-[16vh] flex items-center justify-between px-[4vw] bg-black/80 border-b-4 border-yellow-600 z-20">
             <div className="flex flex-col">
-              <h1 className="text-[5vh] font-oswald font-black text-[#ffd700] uppercase tracking-tighter">{state.storeName}</h1>
-              <p className="text-[2vh] font-bold text-red-500 uppercase tracking-widest mt-1">Carnes Selecionadas & Qualidade Premium</p>
+              <h1 className="text-[7vh] font-oswald font-black text-yellow-500 uppercase tracking-tighter leading-none">{state.storeName}</h1>
+              <p className="text-[2.2vh] font-bold text-white/50 uppercase tracking-[0.3em] mt-2 italic">Tradição em Carnes Selecionadas</p>
             </div>
-            <div className="flex items-center gap-3 bg-red-900/40 px-6 py-3 rounded-2xl border border-red-500/30">
-              <Clock className="text-[#ffd700]" size="3vh" />
-              <span className="text-[4vh] font-oswald font-bold text-white">{currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+            <div className="flex items-center gap-4 bg-yellow-600/10 px-8 py-4 rounded-3xl border border-yellow-600/30">
+              <Clock className="text-yellow-500" size="4vh" />
+              <span className="text-[5vh] font-oswald font-black text-white tracking-tighter">
+                {currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </span>
             </div>
           </header>
           
-          <div ref={productContainerRef} className="flex-grow px-[3vw] py-[2vh] relative overflow-hidden">
-            <div ref={productListRef} className="grid grid-cols-1 gap-[0.8vh] transition-transform duration-100 ease-linear" style={{ transform: `translateY(-${productScrollY}px)` }}>
+          <div ref={productContainerRef} className="flex-grow px-[4vw] py-[4vh] relative overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
+            <div ref={productListRef} className="flex flex-col gap-4 transition-transform duration-100 ease-linear" style={{ transform: `translateY(-${productScrollY}px)` }}>
               {state.products.map((product) => (
-                <div key={product.id} className="flex justify-between items-center border-b border-white/5 pb-[0.5vh]">
+                <div key={product.id} className="flex justify-between items-center bg-white/5 rounded-2xl p-6 border-l-[1.5vh] border-yellow-600/50 hover:bg-white/10 transition-colors">
                   <div className="flex flex-col">
-                    <span className="text-[3.5vh] font-oswald font-bold uppercase text-white leading-tight">{product.name}</span>
-                    <span className="text-[1.8vh] text-gray-400 font-semibold uppercase">Por {product.unit}</span>
+                    <span className="text-[4.5vh] font-oswald font-black uppercase text-white leading-none mb-1">{product.name}</span>
+                    <span className="text-[1.8vh] text-white/30 font-bold uppercase tracking-widest">Preço por {product.unit}</span>
                   </div>
-                  <div className="flex items-baseline gap-1 text-[#ffd700]">
-                    <span className="text-[2.5vh] font-bold">R$</span>
-                    <span className="text-[5.5vh] font-oswald font-black tracking-tighter leading-none">{product.price.toFixed(2).replace('.', ',')}</span>
+                  <div className="flex items-baseline gap-2 text-yellow-500">
+                    <span className="text-[3vh] font-black opacity-80">R$</span>
+                    <span className="text-[8vh] font-oswald font-black tracking-tighter leading-none">{product.price.toFixed(2).replace('.', ',')}</span>
                   </div>
                 </div>
               ))}
             </div>
           </div>
           
-          <footer className="h-[8vh] bg-[#ffd700] flex items-center justify-center relative z-20">
-            <span className="text-[3vh] font-black text-black uppercase tracking-[0.5em]">O Melhor Preço do Dia</span>
+          <footer className="h-[8vh] bg-yellow-600 flex items-center justify-center relative z-20 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+            <span className="text-[3.5vh] font-black text-black uppercase tracking-[0.4em] italic">Preços imbatíveis todos os dias!</span>
           </footer>
         </div>
 
-        <div className="w-[45%] h-full relative bg-[#ffd700] flex flex-col overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 bg-red-700 py-[4vh] shadow-xl z-20 transform -skew-y-2 -mt-[1.5vh]">
-            <h2 className="text-[6.5vh] font-oswald font-black text-white text-center uppercase tracking-tighter italic transform skew-y-2">Oferta Especial</h2>
+        <div className="w-[42%] h-full relative bg-yellow-500 flex flex-col overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 bg-red-700 py-[3vh] shadow-2xl z-20 transform -skew-y-3 -mt-[1vh]">
+            <h2 className="text-[6vh] font-oswald font-black text-white text-center uppercase tracking-tighter italic transform skew-y-3">OFERTA ESPECIAL</h2>
           </div>
           
-          <div className="flex-grow relative flex flex-col">
+          <div className="flex-grow relative flex flex-col pt-[12vh]">
             {activePromos.length > 0 ? (
               activePromos.map((promo, idx) => {
                 const product = state.products.find(p => p.id === promo.productId);
                 const isActive = idx === currentPromoIndex;
+                const { integer, decimal } = formatPrice(promo.offerPrice);
+                
                 return (
                   <div 
                     key={promo.id} 
-                    className={`absolute inset-0 flex flex-col items-center justify-center p-[4vw] pt-[15vh] transition-all duration-1000 ${isActive ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-20 opacity-0 scale-95 pointer-events-none'}`}
+                    className={`absolute inset-0 flex flex-col items-center p-[3vw] pt-[5vh] transition-all duration-1000 cubic-bezier(0.4, 0, 0.2, 1) ${isActive ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'}`}
                   >
-                    <div className="w-full h-[42vh] mb-[4vh] transform hover:scale-[1.02] transition-transform duration-500">
-                      <div className="w-full h-full bg-white rounded-[5vh] overflow-hidden shadow-2xl border-[1.2vh] border-white">
-                        <img src={promo.imageUrl} className="w-full h-full object-cover" />
+                    <div className="w-full h-[40vh] mb-[3vh] transform hover:scale-[1.03] transition-transform duration-700">
+                      <div className="w-full h-full bg-white rounded-[4vh] overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.3)] border-[1.2vh] border-white relative">
+                        <img src={promo.imageUrl} className="w-full h-full object-cover" alt={product?.name} />
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-red-900/80 to-transparent p-6">
+                           <h3 className="text-[6.5vh] font-oswald font-black text-white uppercase leading-none tracking-tight">{product?.name}</h3>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="text-center w-full space-y-[2.5vh] mb-[4vh]">
-                      <h3 className="text-[8vh] font-oswald font-black text-red-900 uppercase leading-none tracking-tight">{product?.name}</h3>
-                      <div className="bg-red-900 text-white px-8 py-3 rounded-2xl inline-block max-w-[90%] shadow-lg border-l-[1vh] border-white/30">
-                        <p className="text-[2.8vh] font-bold italic truncate">"{promo.description}"</p>
+                    <div className="text-center w-full mb-[3vh]">
+                      <div className="bg-red-900/10 border border-red-900/20 text-red-900 px-6 py-4 rounded-3xl inline-block max-w-full shadow-sm">
+                        <p className="text-[3.2vh] font-black italic leading-tight">"{promo.description}"</p>
                       </div>
                     </div>
 
-                    <div className="mt-auto mb-[2vh] w-full flex items-center justify-center bg-red-700 text-white py-[5vh] rounded-[4vh] shadow-2xl border-b-[1.5vh] border-red-900">
+                    <div className="mt-auto mb-[2vh] w-full flex items-center justify-center bg-red-700 text-white py-[4vh] rounded-[4vh] shadow-2xl border-b-[1.5vh] border-red-900 transform transition-transform active:scale-95">
                       <div className="flex items-start">
-                        <span className="text-[4.5vh] font-black mt-[2.5vh] mr-3">R$</span>
-                        <span className="text-[16vh] font-oswald font-black leading-none tracking-tighter">{formatPrice(promo.offerPrice).integer}</span>
+                        <span className="text-[5vh] font-black mt-4 mr-3 opacity-80">R$</span>
+                        <span className="text-[18vh] font-oswald font-black leading-none tracking-tighter">{integer}</span>
                         <div className="flex flex-col">
-                          <span className="text-[8vh] font-oswald font-black leading-none">,{formatPrice(promo.offerPrice).decimal}</span>
-                          <span className="text-[3vh] font-bold uppercase text-yellow-400 mt-1">por {product?.unit}</span>
+                          <span className="text-[9vh] font-oswald font-black leading-none">,{decimal}</span>
+                          <span className="text-[3vh] font-black uppercase text-yellow-400 mt-2 bg-black/20 px-3 py-1 rounded-lg">por {product?.unit}</span>
                         </div>
                       </div>
                     </div>
@@ -272,21 +286,24 @@ const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp, highlightedP
                 );
               })
             ) : (
-              <div className="flex-grow flex items-center justify-center text-red-900/20">
-                <Tag size="20vh" className="animate-pulse" />
+              <div className="flex-grow flex flex-col items-center justify-center text-red-900/20 p-12 text-center">
+                <Tag size="15vh" className="mb-8 opacity-20" />
+                <p className="text-[4vh] font-black uppercase italic tracking-widest">Confira nossas ofertas exclusivas no balcão!</p>
               </div>
             )}
           </div>
 
-          <footer className="h-[6vh] bg-black/5 flex items-center justify-center">
-            <span className="text-[2vh] font-black text-red-900/40 uppercase tracking-[0.3em]">Qualidade Garantida Fabio FCell</span>
+          <footer className="h-[6vh] bg-black/10 flex items-center justify-center border-t border-black/5">
+            <span className="text-[1.8vh] font-black text-red-900/60 uppercase tracking-[0.5em] italic">Qualidade Garantida por Fabio FCell</span>
           </footer>
         </div>
       </div>
 
       <style>{`
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        .animate-marquee { display: flex; animation: marquee 25s linear infinite; }
+        .animate-marquee { display: flex; animation: marquee 35s linear infinite; }
+        .animate-spin-slow { animation: spin 8s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );
