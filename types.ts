@@ -4,7 +4,7 @@ export interface Product {
   name: string;
   price: number;
   unit: string;
-  category: string;
+  category?: string;
 }
 
 export interface Promotion {
@@ -17,20 +17,17 @@ export interface Promotion {
 }
 
 export interface SuperOffer {
-  productIds: string[]; // Agora suporta múltiplos IDs
-  discountPrices: Record<string, number>; // Mapeia ID do produto para seu preço de oferta
+  productIds: string[];
+  discountPrices: Record<string, number>;
   isActive: boolean;
 }
 
-export type AppMode = 'ADMIN' | 'TV' | 'CONTROLLER';
-
 export interface AppState {
+  storeName: string;
   products: Product[];
   promotions: Promotion[];
   superOffer: SuperOffer;
-  storeName: string;
-  accentColor: string;
-  promoInterval: number;
-  productPageInterval: number;
+  view: 'ADMIN' | 'TV';
   tvOrientation: 0 | 90;
+  promoInterval: number;
 }

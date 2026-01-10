@@ -1,74 +1,69 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const ensureApiKey = async (): Promise<string> => {
-  // Apenas retorna a chave injetada pelo sistema. 
-  // O controle de abertura do seletor agora é feito exclusivamente via UI no painel de configurações.
-  return process.env.API_KEY || '';
-};
-
 export const geminiService = {
-  async generateCatchyDescription(productName: string): Promise<string> {
+  // Faz uma pergunta genérica para a IA
+  async ask(prompt: string): Promise<string> {
     try {
-      const apiKey = await ensureApiKey();
-      if (!apiKey) throw new Error("API Key não configurada");
-      
-      const ai = new GoogleGenAI({ apiKey });
+      // Create a new instance right before use with process.env.API_KEY
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Crie uma frase curta e impactante de marketing para vender ${productName} em um açougue. Máximo 40 caracteres. Use palavras como 'Suculento', 'Premium', 'Oferta'.`,
+        contents: [{ parts: [{ text: prompt }] }],
       });
-      return response.text?.replace(/[#"]/g, '').trim() || "Qualidade superior em cada corte.";
-    } catch (error: any) {
-      console.error("Gemini Text Error:", error);
-      return "O melhor sabor para sua mesa hoje.";
+      return response.text || "Sem resposta.";
+    } catch (e) {
+      console.error("Erro na IA:", e);
+      return "Erro na IA.";
     }
   },
 
-  async generateProductImage(
-    prompt: string, 
-    highQuality: boolean = false, 
-    aspectRatio: "1:1" | "16:9" | "4:3" | "3:4" | "9:16" = "1:1"
-  ): Promise<string | null> {
+  // Gera uma frase de marketing curta e impactante para o produto
+  async generateCatchyDescription(productName: string): Promise<string> {
     try {
-      const apiKey = await ensureApiKey();
-      if (!apiKey) return null;
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: [{ parts: [{ text: `Crie uma frase de marketing muito curta (máx 45 caracteres) para vender ${productName} em um açougue. Retorne apenas o texto da frase em letras maiúsculas, sem aspas.` }] }],
+      });
+      return response.text?.trim().toUpperCase() || "QUALIDADE GARANTIDA!";
+    } catch (e) {
+      console.error("Erro na descrição IA:", e);
+      return "QUALIDADE E PREÇO BAIXO!";
+    }
+  },
 
-      const tryGenerate = async (modelName: string) => {
-        const ai = new GoogleGenAI({ apiKey });
-        const enhancedPrompt = prompt.length < 30 
-          ? `Professional commercial food photography of ${prompt}. Fresh meat, high quality, dark slate background, cinematic lighting, appetizing, 4k, macro shot.`
-          : prompt;
-
-        const config: any = {
+  // Gera uma imagem profissional do produto usando os modelos de imagem do Gemini
+  async generateProductImage(productName: string, highQuality: boolean = false, aspectRatio: string = "1:1"): Promise<string | null> {
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      // Seleciona o modelo baseado na qualidade desejada
+      const model = highQuality ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
+      
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: {
+          parts: [{ text: `High quality professional commercial photography of fresh ${productName} raw meat, appetizing, studio lighting, butcher shop background.` }]
+        },
+        config: {
           imageConfig: {
-            aspectRatio: aspectRatio
+            aspectRatio: aspectRatio as any,
           }
-        };
-
-        if (modelName === 'gemini-3-pro-image-preview') {
-          config.imageConfig.imageSize = "1K";
         }
+      });
 
-        return await ai.models.generateContent({
-          model: modelName,
-          contents: {
-            parts: [{ text: enhancedPrompt }]
-          },
-          config: config
-        });
-      };
-
-      const targetModel = highQuality ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
-      let response = await tryGenerate(targetModel);
-
-      const part = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-      if (part?.inlineData) {
-        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+      // Itera pelas partes para encontrar os dados da imagem (inlineData)
+      const candidates = response.candidates;
+      if (candidates && candidates.length > 0) {
+        for (const part of candidates[0].content.parts) {
+          if (part.inlineData) {
+            return `data:image/png;base64,${part.inlineData.data}`;
+          }
+        }
       }
       return null;
-    } catch (error: any) {
-      console.error("Gemini Image Error:", error);
+    } catch (e) {
+      console.error("Erro na geração de imagem Gemini:", e);
       return null;
     }
   }

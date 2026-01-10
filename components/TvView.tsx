@@ -1,15 +1,16 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AppState } from '../types';
-import { Clock, Star, Flame, RotateCcw, RotateCw, Tag, Server } from 'lucide-react';
+import { AppState, Promotion } from '../types';
+import { Clock, Star, Flame, RotateCcw, RotateCw, Tag, Server, Zap } from 'lucide-react';
 
 interface TvViewProps {
   state: AppState;
   setState?: React.Dispatch<React.SetStateAction<AppState>>;
   remoteIp?: string;
+  highlightedPromoId?: string | null;
 }
 
-const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp }) => {
+const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp, highlightedPromoId }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
   const [currentSuperIndex, setCurrentSuperIndex] = useState(0);
@@ -28,26 +29,31 @@ const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp }) => {
     }).filter(item => item.product);
   }, [state.superOffer, state.products, state.promotions]);
 
+  const highlightedPromo = useMemo(() => {
+    if (!highlightedPromoId) return null;
+    return state.promotions.find(p => p.id === highlightedPromoId);
+  }, [highlightedPromoId, state.promotions]);
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    if (activePromos.length <= 1) return;
+    if (activePromos.length <= 1 || highlightedPromo) return;
     const interval = setInterval(() => {
       setCurrentPromoIndex(prev => (prev + 1) % activePromos.length);
     }, state.promoInterval);
     return () => clearInterval(interval);
-  }, [activePromos.length, state.promoInterval]);
+  }, [activePromos.length, state.promoInterval, highlightedPromo]);
 
   useEffect(() => {
-    if (!state.superOffer.isActive || activeSuperOffers.length <= 1) return;
+    if (!state.superOffer.isActive || activeSuperOffers.length <= 1 || highlightedPromo) return;
     const interval = setInterval(() => {
       setCurrentSuperIndex(prev => (prev + 1) % activeSuperOffers.length);
     }, state.promoInterval * 0.8);
     return () => clearInterval(interval);
-  }, [state.superOffer.isActive, activeSuperOffers.length, state.promoInterval]);
+  }, [state.superOffer.isActive, activeSuperOffers.length, state.promoInterval, highlightedPromo]);
 
   useEffect(() => {
     let animationFrame: number;
@@ -78,7 +84,6 @@ const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp }) => {
     return () => cancelAnimationFrame(animationFrame);
   }, [state.products]);
 
-  const currentSuper = activeSuperOffers[currentSuperIndex];
   const formatPrice = (price: number) => {
     const parts = price.toFixed(2).split('.');
     return { integer: parts[0], decimal: parts[1] };
@@ -98,6 +103,41 @@ const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp }) => {
   return (
     <div className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center">
       
+      {/* OVERLAY DE DESTAQUE (COMANDO REMOTO) */}
+      {highlightedPromo && (
+        <div className="fixed inset-0 z-[200] bg-red-700 flex flex-col animate-in fade-in zoom-in duration-500">
+           <div className="absolute top-0 left-0 right-0 h-[15vh] bg-black flex items-center justify-center border-b-8 border-red-800">
+              <div className="flex items-center gap-10 animate-pulse">
+                <Zap className="text-yellow-400" size="8vh" />
+                <h2 className="text-[10vh] font-oswald font-black text-white italic tracking-tighter uppercase">OFERTA AGORA!</h2>
+                <Zap className="text-yellow-400" size="8vh" />
+              </div>
+           </div>
+           
+           <div className="flex-grow flex flex-col items-center justify-center p-[5vh] mt-[10vh]">
+              <div className="w-[80%] max-w-[1200px] aspect-video bg-white rounded-[5vh] shadow-[0_40px_100px_rgba(0,0,0,0.6)] overflow-hidden border-[2vh] border-white relative">
+                 <img src={highlightedPromo.imageUrl} className="w-full h-full object-cover" alt="Destaque" />
+                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-10">
+                    <h3 className="text-[10vh] font-oswald font-black text-white uppercase italic leading-none">{state.products.find(p => p.id === highlightedPromo.productId)?.name}</h3>
+                 </div>
+              </div>
+              
+              <div className="mt-[5vh] bg-yellow-400 px-[8vw] py-[4vh] rounded-[4vh] border-b-[1.5vh] border-yellow-600 shadow-2xl flex items-center gap-[5vw]">
+                  <div className="text-center">
+                    <p className="text-[4vh] font-black text-red-900 uppercase italic">Aproveite:</p>
+                    <p className="text-[18vh] font-oswald font-black text-red-700 leading-none tracking-tighter">
+                      R$ {highlightedPromo.offerPrice.toFixed(2).replace('.', ',')}
+                    </p>
+                  </div>
+                  <div className="h-[15vh] w-px bg-red-900/20" />
+                  <p className="text-[5vh] font-black text-red-900 uppercase max-w-[400px] leading-tight italic">
+                    "{highlightedPromo.description}"
+                  </p>
+              </div>
+           </div>
+        </div>
+      )}
+
       {/* Botões de controle de rotação - Invisíveis por padrão */}
       <div className="fixed top-6 right-6 z-[110] flex gap-2 opacity-0 hover:opacity-100 transition-opacity">
         <button onClick={() => handleRotate(0)} className={`p-3 rounded-xl border flex items-center gap-2 font-black text-xs uppercase transition-all ${state.tvOrientation === 0 ? 'bg-red-600 border-red-500' : 'bg-black/50 border-white/20 text-white/50'}`}>
@@ -110,7 +150,7 @@ const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp }) => {
 
       <div style={rotationStyles} className="bg-[#0a0a0a] flex flex-row select-none text-white relative transition-all duration-700">
         
-        {state.superOffer.isActive && currentSuper && (
+        {state.superOffer.isActive && activeSuperOffers[currentSuperIndex] && !highlightedPromo && (
           <div className="fixed inset-0 z-[100] bg-yellow-400 flex flex-col animate-in zoom-in duration-500">
             <div className="absolute top-0 left-0 right-0 h-[20vh] bg-red-600 flex items-center justify-center shadow-2xl overflow-hidden">
               <div className="flex items-center gap-[5vw] animate-pulse">
@@ -123,20 +163,20 @@ const TvView: React.FC<TvViewProps> = ({ state, setState, remoteIp }) => {
             <div className="flex-grow flex items-center justify-between px-[10vw] pt-[15vh]">
               <div className="w-[45%] flex flex-col items-center gap-[4vh]">
                 <div className="w-full aspect-square bg-white rounded-[5vh] shadow-2xl border-[2vh] border-white p-[2vh] transform -rotate-2 overflow-hidden">
-                  <img src={currentSuper.promo?.imageUrl || "https://images.unsplash.com/photo-1544025162-d76694265947?w=800"} className="w-full h-full object-cover" alt="Super Oferta" />
+                  <img src={activeSuperOffers[currentSuperIndex].promo?.imageUrl || "https://images.unsplash.com/photo-1544025162-d76694265947?w=800"} className="w-full h-full object-cover" alt="Super Oferta" />
                 </div>
                 <div className="bg-red-600 text-white px-8 py-4 rounded-full text-[4vh] font-black uppercase tracking-widest animate-bounce">SÓ ENQUANTO DURAR!</div>
               </div>
               <div className="w-[50%] flex flex-col items-center text-center">
-                <h3 className="text-[14vh] font-oswald font-black text-red-900 leading-none mb-[2vh] uppercase">{currentSuper.product?.name}</h3>
+                <h3 className="text-[14vh] font-oswald font-black text-red-900 leading-none mb-[2vh] uppercase">{activeSuperOffers[currentSuperIndex].product?.name}</h3>
                 <div className="flex flex-col items-center bg-red-600 text-white px-[5vw] py-[4vh] rounded-[5vh] shadow-2xl border-b-[2vh] border-red-900">
                   <span className="text-[5vh] font-black italic opacity-80 uppercase leading-none">APROVEITE:</span>
                   <div className="flex items-start">
                     <span className="text-[6vh] font-black mt-[4vh] mr-2">R$</span>
-                    <span className="text-[30vh] font-oswald font-black leading-[0.8] tracking-tighter">{formatPrice(currentSuper.discountPrice).integer}</span>
+                    <span className="text-[30vh] font-oswald font-black leading-[0.8] tracking-tighter">{formatPrice(activeSuperOffers[currentSuperIndex].discountPrice).integer}</span>
                     <div className="flex flex-col">
-                      <span className="text-[12vh] font-oswald font-black">,{formatPrice(currentSuper.discountPrice).decimal}</span>
-                      <span className="text-[4vh] font-bold uppercase text-yellow-400">por {currentSuper.product?.unit}</span>
+                      <span className="text-[12vh] font-oswald font-black">,{formatPrice(activeSuperOffers[currentSuperIndex].discountPrice).decimal}</span>
+                      <span className="text-[4vh] font-bold uppercase text-yellow-400">por {activeSuperOffers[currentSuperIndex].product?.unit}</span>
                     </div>
                   </div>
                 </div>
